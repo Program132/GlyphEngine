@@ -1,7 +1,7 @@
-#include "src/engine/engine.h"
-#include "src/gameobject/point/point.h"
-#include "src/gameobject/rectangle/rectangle.h"
-#include "src/inputs/inputs.h"
+#include "../src/engine/engine.h"
+#include "../src/gameobject/point/point.h"
+#include "../src/gameobject/rectangle/rectangle.h"
+#include "../src/inputs/inputs.h"
 
 struct GameObject_Point* player;
 float player_x = 5.0f;
