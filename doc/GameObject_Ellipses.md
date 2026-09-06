@@ -8,6 +8,8 @@
 | character | char            | Character used to render the ellipse when untextured.                           |
 | filled    | int             | If 1, the ellipse is filled. If 0, only the outline is rendered.                 |
 | texture   | struct Texture* | Optional ASCII texture pattern repeated across the ellipse's interior or border. |
+| fg        | Color           | Foreground ANSI color.                                                          |
+| bg        | Color           | Background ANSI color.                                                          |
 
 # Functions
 
@@ -29,4 +31,7 @@
 | ellipse_disable_filled | void                       | struct GameObject_Ellipse *ellipse                                                       | Disables filled mode (`filled` = 0).                                                        |
 | ellipse_set_texture    | void                       | struct GameObject_Ellipse *ellipse, struct Texture *texture                              | Assigns an ASCII pattern texture to the ellipse.                                            |
 | ellipse_get_texture    | struct Texture*            | struct GameObject_Ellipse *ellipse                                                       | Returns the assigned texture (or `NULL`).                                                   |
+| ellipse_set_color      | void                       | struct GameObject_Ellipse *ellipse, Color fg, Color bg                                   | Sets the foreground and background ANSI colors for the ellipse.                            |
+| ellipse_get_fg         | Color                      | struct GameObject_Ellipse *ellipse                                                       | Returns the foreground color.                                                               |
+| ellipse_get_bg         | Color                      | struct GameObject_Ellipse *ellipse                                                       | Returns the background color.                                                               |
 | ellipse_get_points     | struct GameObject_Point*   | struct GameObject_Ellipse *ellipse                                                       | Allocates and returns an array of all `GameObject_Point` belonging to the ellipse.          |

@@ -7,9 +7,12 @@
 | rectangles       | struct GameObject_Rectangle** | Dynamic array of pointers to rectangles             |
 | ellipses         | struct GameObject_Ellipse**   | Dynamic array of pointers to ellipses               |
 | players          | struct GameObject_Player**    | Dynamic array of pointers to players                |
+| texts            | struct GameObject_Text**      | Dynamic array of pointers to text/HUD objects       |
 | sizeX            | int                           | Level width (number of columns)                     |
 | sizeY            | int                           | Level height (number of rows)                       |
 | defaultCharacter | char                          | Default character used for empty/background cells   |
+| default_fg       | Color                         | Default foreground color for background cells       |
+| default_bg       | Color                         | Default background color for background cells       |
 
 # Constants
 
@@ -23,7 +26,7 @@
 |----------------------------|------------------------------|-----------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
 | level_new                  | struct Level*                | char* levelName, int sizeX, int sizeY, char defaultCharacter                            | Dynamically allocates and initializes a new level with the specified parameters          |
 | level_build                | void                         | struct Level *level, char* levelName, int sizeX, int sizeY, char defaultCharacter       | Initializes an existing level structure, allocates pointer arrays, and sets fields         |
-| level_display              | void                         | struct Level *level                                                                     | Renders the level using a single frame buffer to avoid console flickering                 |
+| level_display              | void                         | struct Level *level                                                                     | Renders the level using an optimized double buffer with ANSI color tracking               |
 | level_add_point            | void                         | struct Level *level, struct GameObject_Point *point                                     | Adds a point to the level (the level assumes ownership of the object's memory)             |
 | level_remove_point         | void                         | struct Level *level, struct GameObject_Point *point                                     | Removes the specified point from the level                                                |
 | level_get_point            | struct GameObject_Point*     | struct Level *level, struct Vector2 position                                            | Returns a pointer to the point at the given position (or NULL if not found)              |
@@ -36,6 +39,8 @@
 | level_add_player           | void                         | struct Level *level, struct GameObject_Player *player                                   | Adds a player entity to the level (the level assumes ownership of the player)            |
 | level_remove_player        | void                         | struct Level *level, struct GameObject_Player *player                                   | Removes the specified player entity from the level                                        |
 | level_get_player           | struct GameObject_Player*    | struct Level *level, struct Vector2 position                                            | Returns a pointer to the player at or covering the given position (or NULL)               |
+| level_add_text             | void                         | struct Level *level, struct GameObject_Text *text                                       | Adds a text object / HUD label to the level (level assumes ownership of memory)          |
+| level_remove_text          | void                         | struct Level *level, struct GameObject_Text *text                                       | Removes the specified text object from the level                                          |
 | level_get_name             | char*                        | struct Level *level                                                                     | Returns the name of the level                                                             |
 | level_get_sizeX            | int                          | struct Level *level                                                                     | Returns the width (sizeX) of the level                                                    |
 | level_get_sizeY            | int                          | struct Level *level                                                                     | Returns the height (sizeY) of the level                                                   |
@@ -44,6 +49,9 @@
 | level_set_sizeX            | void                         | struct Level *level, int sizeX                                                          | Sets the width (sizeX) of the level                                                       |
 | level_set_sizeY            | void                         | struct Level *level, int sizeY                                                          | Sets the height (sizeY) of the level                                                      |
 | level_set_defaultCharacter | void                         | struct Level *level, char defaultCharacter                                             | Sets the default background character                                                     |
+| level_set_default_color    | void                         | struct Level *level, Color fg, Color bg                                                 | Sets the default foreground and background colors for background cells                     |
+| level_get_default_fg       | Color                        | struct Level *level                                                                     | Returns the default foreground color                                                      |
+| level_get_default_bg       | Color                        | struct Level *level                                                                     | Returns the default background color                                                      |
 | level_free                 | void                         | struct Level *level                                                                     | Frees the level, its internal arrays, and all contained game objects (`*_free`)          |
 
 ## Memory Management

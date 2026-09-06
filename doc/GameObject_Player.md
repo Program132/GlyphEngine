@@ -14,6 +14,8 @@ The `GameObject_Player` structure represents an interactive player entity within
 | max_health | int             | Maximum possible health of the player.                                          |
 | character  | char            | Single character glyph (used when no texture is assigned).                      |
 | texture    | struct Texture* | Pointer to an optional multi-character ASCII sprite with transparency.          |
+| fg         | Color           | Foreground ANSI color.                                                          |
+| bg         | Color           | Background ANSI color.                                                          |
 
 # Functions
 
@@ -37,3 +39,6 @@ The `GameObject_Player` structure represents an interactive player entity within
 | player_take_damage   | void                      | struct GameObject_Player *player, int amount                             | Reduces player health by the specified amount (cannot drop below 0).                      |
 | player_heal          | void                      | struct GameObject_Player *player, int amount                             | Increases player health up to `max_health`.                                               |
 | player_is_alive      | int                       | struct GameObject_Player *player                                         | Returns `1` if health > 0, `0` otherwise.                                                 |
+| player_set_color     | void                      | struct GameObject_Player *player, Color fg, Color bg                     | Sets the foreground and background ANSI colors for the player.                            |
+| player_get_fg        | Color                     | struct GameObject_Player *player                                         | Returns the foreground color.                                                             |
+| player_get_bg        | Color                     | struct GameObject_Player *player                                         | Returns the background color.                                                             |

@@ -8,6 +8,8 @@
 | character | char            | Character used to render the rectangle when untextured.                         |
 | filled    | int             | If 1, the rectangle is filled. If 0, only the outline is rendered.               |
 | texture   | struct Texture* | Optional ASCII texture pattern repeated across the rectangle's dimensions.      |
+| fg        | Color           | Foreground ANSI color.                                                          |
+| bg        | Color           | Background ANSI color.                                                          |
 
 # Functions
 
@@ -29,4 +31,7 @@
 | rectangle_disable_filled | void                          | struct GameObject_Rectangle *rectangle                                                        | Disables filled mode (`filled` = 0).                                                        |
 | rectangle_set_texture    | void                          | struct GameObject_Rectangle *rectangle, struct Texture *texture                               | Assigns an ASCII pattern texture to the rectangle.                                          |
 | rectangle_get_texture    | struct Texture*               | struct GameObject_Rectangle *rectangle                                                        | Returns the assigned texture (or `NULL`).                                                   |
+| rectangle_set_color      | void                          | struct GameObject_Rectangle *rectangle, Color fg, Color bg                                    | Sets the foreground and background ANSI colors for the rectangle.                           |
+| rectangle_get_fg         | Color                         | struct GameObject_Rectangle *rectangle                                                        | Returns the foreground color.                                                               |
+| rectangle_get_bg         | Color                         | struct GameObject_Rectangle *rectangle                                                        | Returns the background color.                                                               |
 | rectangle_get_points     | struct GameObject_Point*      | struct GameObject_Rectangle *rectangle                                                        | Allocates and returns an array of all `GameObject_Point` covering the rectangle.            |
