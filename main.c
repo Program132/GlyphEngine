@@ -1,20 +1,24 @@
 #include "src/engine/engine.h"
 #include "src/inputs/inputs.h"
-#include "src/levelworld/levelworld.h"
+#include "src/level/level.h"
 #include "src/gameobject/player/player.h"
 #include "src/gameobject/rectangle/rectangle.h"
 #include "src/gameobject/circle/circle.h"
 #include "src/gameobject/point/point.h"
-#include "src/gameobject/text/text.h"
+#include "src/physics/physics.h"
 #include "src/collision/collision.h"
 #include "src/color/color.h"
 #include <stdio.h>
 
 struct Engine *g_engine = NULL;
-struct LevelWorld *g_world = NULL;
+struct Level *g_level = NULL;
 struct GameObject_Player *g_player = NULL;
-struct GameObject_Point *g_gems[8];
-int g_gems_collected = 0;
+struct GameObject_Rectangle *g_box = NULL;
+struct PhysicsBody g_box_body;
+struct GameObject_Ellipse *g_ball = NULL;
+struct PhysicsBody g_ball_body;
+struct GameObject_Point *g_coins[4];
+int g_coins_collected = 0;
 
 void update(struct Engine *engine, float dt) {
     if (input_is_key_down(KEY_ESCAPE)) {
@@ -22,115 +26,120 @@ void update(struct Engine *engine, float dt) {
         return;
     }
 
-    float dx = 0.0f;
-    float dy = 0.0f;
+    float move_x = 0.0f;
+    if (input_is_key_down(KEY_LEFT) || input_is_key_down('q') || input_is_key_down('a')) move_x -= 1.0f;
+    if (input_is_key_down(KEY_RIGHT) || input_is_key_down('d')) move_x += 1.0f;
 
-    if (input_is_key_down(KEY_UP) || input_is_key_down('z') || input_is_key_down('w')) dy -= 1.0f;
-    if (input_is_key_down(KEY_DOWN) || input_is_key_down('s')) dy += 1.0f;
-    if (input_is_key_down(KEY_LEFT) || input_is_key_down('q') || input_is_key_down('a')) dx -= 1.0f;
-    if (input_is_key_down(KEY_RIGHT) || input_is_key_down('d')) dx += 1.0f;
+    int jump_pressed = (input_is_key_down(KEY_SPACE) || input_is_key_down(KEY_UP) || input_is_key_down('z') || input_is_key_down('w'));
 
-    player_move(g_player, dx, dy, dt);
-    collision_clamp_player(level_world_as_level(g_world), g_player);
+    physics_simulate_player(g_player, g_level, move_x, jump_pressed, dt);
 
-    level_world_follow_player(g_world, g_player, 6.0f, dt);
+    physics_simulate_rectangle(g_box, &g_box_body, g_level, dt);
+    physics_simulate_ellipse(g_ball, &g_ball_body, g_level, dt);
 
-    struct Level *base_lvl = level_world_as_level(g_world);
-
-    if (input_is_key_down(KEY_SPACE)) {
-        level_spawn_particles_sparkle(base_lvl, g_player->exact_x, g_player->exact_y, 2, COLOR_BRIGHT_YELLOW);
-    }
-
-    for (int i = 0; i < 8; i++) {
-        if (g_gems[i] != NULL && collision_check_player_point(g_player, g_gems[i])) {
-            level_spawn_particles_explosion(base_lvl, (float)g_gems[i]->position.x, (float)g_gems[i]->position.y, 12, COLOR_BRIGHT_CYAN);
-            g_gems[i]->position.x = -100;
-            g_gems[i]->position.y = -100;
-            g_gems_collected++;
+    if (collision_check_player_rect(g_player, g_box)) {
+        if (g_player->vx > 0.0f) {
+            physics_body_apply_force(&g_box_body, 12.0f, -4.0f);
+        } else if (g_player->vx < 0.0f) {
+            physics_body_apply_force(&g_box_body, -12.0f, -4.0f);
         }
     }
 
-    level_update(base_lvl, dt);
+    if (collision_check_player_ellipse(g_player, g_ball)) {
+        if (g_player->vx > 0.0f) {
+            physics_body_apply_force(&g_ball_body, 16.0f, -10.0f);
+        } else if (g_player->vx < 0.0f) {
+            physics_body_apply_force(&g_ball_body, -16.0f, -10.0f);
+        } else {
+            physics_body_apply_force(&g_ball_body, 0.0f, -14.0f);
+        }
+        level_spawn_particles_sparkle(g_level, (float)g_ball->position.x, (float)g_ball->position.y, 4, COLOR_BRIGHT_YELLOW);
+    }
 
-    char top_buf[100];
-    snprintf(top_buf, sizeof(top_buf), " PLAYER: (%3.0f, %2.0f) | CAM: (%3.0f, %2.0f) | GEMS: %d/8 | WORLD: 140x45 ",
-             g_player->exact_x, g_player->exact_y, g_world->base.cam_x, g_world->base.cam_y, g_gems_collected);
-    level_set_hud_text(base_lvl, HUD_TOP, 0, top_buf, COLOR_BRIGHT_GREEN, COLOR_BLACK);
+    for (int i = 0; i < 4; i++) {
+        if (g_coins[i] != NULL && collision_check_player_point(g_player, g_coins[i])) {
+            level_spawn_particles_explosion(g_level, (float)g_coins[i]->position.x, (float)g_coins[i]->position.y, 10, COLOR_BRIGHT_YELLOW);
+            g_coins[i]->position.x = -100;
+            g_coins[i]->position.y = -100;
+            g_coins_collected++;
+        }
+    }
+
+    level_update(g_level, dt);
+
+    char hud_buf[100];
+    snprintf(hud_buf, sizeof(hud_buf), " GROUNDED: %-3s | VY: %+5.1f | JUMP POWER: %2.0f | COINS: %d/4 ",
+             player_is_grounded(g_player) ? "YES" : "NO", g_player->vy, player_get_jump_power(g_player), g_coins_collected);
+    Color hud_col = player_is_grounded(g_player) ? COLOR_BRIGHT_GREEN : COLOR_BRIGHT_YELLOW;
+    level_set_hud_text(g_level, HUD_TOP, 0, hud_buf, hud_col, COLOR_BLACK);
 }
 
 int main() {
-    g_world = level_world_new("The Great Overworld", 140, 45, 60, 16, '.');
-    struct Level *base_lvl = level_world_as_level(g_world);
-    level_set_default_color(base_lvl, COLOR_BRIGHT_BLACK, COLOR_DEFAULT);
+    g_level = level_new("Platformer Physics Arena", 60, 18, '.');
+    level_set_default_color(g_level, COLOR_BRIGHT_BLACK, COLOR_DEFAULT);
 
-    level_set_hud_separator(base_lvl, HUD_TOP, '=', COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
-    level_set_hud_text(base_lvl, HUD_TOP, 0, " EXPLORE THE VAST WORLD ", COLOR_BRIGHT_GREEN, COLOR_BLACK);
+    level_set_hud_separator(g_level, HUD_TOP, '=', COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
+    level_set_hud_text(g_level, HUD_TOP, 0, " PLATFORMER PHYSICS READY ", COLOR_BRIGHT_GREEN, COLOR_BLACK);
 
-    level_set_hud_separator(base_lvl, HUD_BOTTOM, '=', COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
-    level_set_hud_text(base_lvl, HUD_BOTTOM, 0, " [ZQSD / Arrows] Move  |  [SPACE] Trail  |  [ESC] Exit ", COLOR_WHITE, COLOR_BLUE);
+    level_set_hud_separator(g_level, HUD_BOTTOM, '=', COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
+    level_set_hud_text(g_level, HUD_BOTTOM, 0, " [A/D] Move  |  [SPACE/W] Jump  |  Push Box & Ball!  |  [ESC] Exit ", COLOR_WHITE, COLOR_BLUE);
 
-    struct GameObject_Rectangle *wall1 = rectangle_new(0, 0, 140, 1, '#');
-    rectangle_enable_filled(wall1);
-    rectangle_set_color(wall1, COLOR_WHITE, COLOR_DEFAULT);
-    level_add_rectangle(base_lvl, wall1);
+    struct GameObject_Rectangle *ground = rectangle_new(0, 16, 60, 2, '=');
+    rectangle_enable_filled(ground);
+    rectangle_set_color(ground, COLOR_WHITE, COLOR_DEFAULT);
+    rectangle_set_solid(ground, 1);
+    level_add_rectangle(g_level, ground);
 
-    struct GameObject_Rectangle *wall2 = rectangle_new(0, 44, 140, 1, '#');
-    rectangle_enable_filled(wall2);
-    rectangle_set_color(wall2, COLOR_WHITE, COLOR_DEFAULT);
-    level_add_rectangle(base_lvl, wall2);
+    struct GameObject_Rectangle *plat1 = rectangle_new(8, 12, 14, 2, '#');
+    rectangle_enable_filled(plat1);
+    rectangle_set_color(plat1, COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
+    rectangle_set_solid(plat1, 1);
+    level_add_rectangle(g_level, plat1);
 
-    struct GameObject_Rectangle *wall3 = rectangle_new(0, 0, 1, 45, '#');
-    rectangle_enable_filled(wall3);
-    rectangle_set_color(wall3, COLOR_WHITE, COLOR_DEFAULT);
-    level_add_rectangle(base_lvl, wall3);
+    struct GameObject_Rectangle *plat2 = rectangle_new(26, 8, 16, 2, '#');
+    rectangle_enable_filled(plat2);
+    rectangle_set_color(plat2, COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
+    rectangle_set_solid(plat2, 1);
+    level_add_rectangle(g_level, plat2);
 
-    struct GameObject_Rectangle *wall4 = rectangle_new(139, 0, 1, 45, '#');
-    rectangle_enable_filled(wall4);
-    rectangle_set_color(wall4, COLOR_WHITE, COLOR_DEFAULT);
-    level_add_rectangle(base_lvl, wall4);
+    struct GameObject_Rectangle *plat3 = rectangle_new(44, 11, 12, 2, '#');
+    rectangle_enable_filled(plat3);
+    rectangle_set_color(plat3, COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
+    rectangle_set_solid(plat3, 1);
+    level_add_rectangle(g_level, plat3);
 
-    struct GameObject_Rectangle *fortress = rectangle_new(25, 10, 20, 8, 'H');
-    rectangle_set_color(fortress, COLOR_BRIGHT_RED, COLOR_DEFAULT);
-    level_add_rectangle(base_lvl, fortress);
+    struct GameObject_Rectangle *decor = rectangle_new(2, 2, 8, 3, ':');
+    rectangle_set_color(decor, COLOR_BLUE, COLOR_DEFAULT);
+    rectangle_set_solid(decor, 0);
+    level_add_rectangle(g_level, decor);
 
-    struct GameObject_Rectangle *ruins = rectangle_new(75, 20, 25, 10, '=');
-    rectangle_set_color(ruins, COLOR_BRIGHT_YELLOW, COLOR_DEFAULT);
-    level_add_rectangle(base_lvl, ruins);
+    g_box = rectangle_new(32, 4, 4, 2, 'B');
+    rectangle_enable_filled(g_box);
+    rectangle_set_color(g_box, COLOR_BRIGHT_MAGENTA, COLOR_DEFAULT);
+    rectangle_set_solid(g_box, 1);
+    level_add_rectangle(g_level, g_box);
+    physics_body_init(&g_box_body, 32.0f, 4.0f, 35.0f, 0.2f);
 
-    struct GameObject_Ellipse *lake = circle_new(105, 10, 14, '~');
-    ellipse_enable_filled(lake);
-    ellipse_set_color(lake, COLOR_BRIGHT_BLUE, COLOR_BLUE);
-    level_add_ellipse(base_lvl, lake);
+    g_ball = circle_new(48, 4, 3, 'O');
+    ellipse_enable_filled(g_ball);
+    ellipse_set_color(g_ball, COLOR_BRIGHT_YELLOW, COLOR_DEFAULT);
+    level_add_ellipse(g_level, g_ball);
+    physics_body_init(&g_ball_body, 48.0f, 4.0f, 35.0f, 0.75f);
 
-    struct GameObject_Ellipse *grove = circle_new(50, 32, 12, 'T');
-    ellipse_set_color(grove, COLOR_BRIGHT_GREEN, COLOR_DEFAULT);
-    level_add_ellipse(base_lvl, grove);
-
-    struct GameObject_Text *sign1 = text_new_colored(28, 12, "RED FORTRESS", COLOR_BRIGHT_RED, COLOR_DEFAULT);
-    level_add_text(base_lvl, sign1);
-
-    struct GameObject_Text *sign2 = text_new_colored(105, 10, "BLUE LAKE", COLOR_BRIGHT_CYAN, COLOR_BLUE);
-    level_add_text(base_lvl, sign2);
-
-    struct GameObject_Text *sign3 = text_new_colored(80, 22, "ANCIENT RUINS", COLOR_BRIGHT_YELLOW, COLOR_DEFAULT);
-    level_add_text(base_lvl, sign3);
-
-    int gem_coords[8][2] = {
-        {10, 5}, {35, 14}, {60, 8}, {110, 12},
-        {20, 35}, {55, 34}, {85, 25}, {130, 40}
-    };
-
-    for (int i = 0; i < 8; i++) {
-        g_gems[i] = point_new(gem_coords[i][0], gem_coords[i][1], '$');
-        point_set_color(g_gems[i], COLOR_BRIGHT_YELLOW, COLOR_DEFAULT);
-        level_add_point(base_lvl, g_gems[i]);
+    int coin_pos[4][2] = {{14, 10}, {34, 6}, {50, 9}, {55, 14}};
+    for (int i = 0; i < 4; i++) {
+        g_coins[i] = point_new(coin_pos[i][0], coin_pos[i][1], '$');
+        point_set_color(g_coins[i], COLOR_BRIGHT_YELLOW, COLOR_DEFAULT);
+        level_add_point(g_level, g_coins[i]);
     }
 
-    g_player = player_new(12, 10, '@', 18.0f);
+    g_player = player_new(4, 14, '@', 16.0f);
     player_set_color(g_player, COLOR_BRIGHT_GREEN, COLOR_DEFAULT);
-    level_add_player(base_lvl, g_player);
+    player_enable_gravity(g_player, 40.0f);
+    player_set_jump_power(g_player, 19.0f);
+    level_add_player(g_level, g_player);
 
-    g_engine = engine_new(base_lvl, 60, 16);
+    g_engine = engine_new(g_level, 60, 18);
     engine_set_update_callback(g_engine, update);
 
     engine_run(g_engine, 30);
