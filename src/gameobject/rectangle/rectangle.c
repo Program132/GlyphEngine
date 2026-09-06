@@ -1,5 +1,6 @@
 #include "rectangle.h"
 #include <stdlib.h>
+#include <stdbool.h>
 
 struct GameObject_Rectangle* rectangle_new(int x, int y, int width, int height, char character) {
     struct GameObject_Rectangle* rectangle = malloc(sizeof(struct GameObject_Rectangle));
@@ -16,6 +17,7 @@ void rectangle_build(struct GameObject_Rectangle *rectangle, int x, int y, int w
     rectangle->height = height;
     rectangle->character = character;
     rectangle->filled = 0;
+    rectangle->texture = NULL;
 }
 
 void rectangle_free(struct GameObject_Rectangle *rectangle) {
@@ -60,6 +62,16 @@ void rectangle_enable_filled(struct GameObject_Rectangle *rectangle) {
 
 void rectangle_disable_filled(struct GameObject_Rectangle *rectangle) {
     rectangle->filled = 0;
+}
+
+void rectangle_set_texture(struct GameObject_Rectangle *rectangle, struct Texture *texture) {
+    if (rectangle == NULL) return;
+    rectangle->texture = texture;
+}
+
+struct Texture* rectangle_get_texture(struct GameObject_Rectangle *rectangle) {
+    if (rectangle == NULL) return NULL;
+    return rectangle->texture;
 }
 
 struct GameObject_Point* rectangle_get_points(struct GameObject_Rectangle *rectangle) {
