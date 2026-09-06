@@ -43,6 +43,8 @@ add_executable(GlyphEngine
         src/projectile/projectile.c
         src/particle/particle.h
         src/particle/particle.c
+        src/physics/physics.h
+        src/physics/physics.c
         src/engine/engine.h
         src/engine/engine.c
         src/inputs/inputs.h
