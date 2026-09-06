@@ -37,6 +37,10 @@ add_executable(GlyphEngine
         src/ui/panel/panel.c
         src/levelui/levelui.h
         src/levelui/levelui.c
+        src/projectile/projectile.h
+        src/projectile/projectile.c
+        src/particle/particle.h
+        src/particle/particle.c
         src/engine/engine.h
         src/engine/engine.c
         src/inputs/inputs.h
