@@ -11,6 +11,10 @@ add_executable(GlyphEngine
         src/level/level.h
         src/utils/utils.h
         src/utils/utils.c
+        src/color/color.h
+        src/color/color.c
+        src/collision/collision.h
+        src/collision/collision.c
         src/texture/texture.h
         src/texture/texture.c
         src/gameobject/point/point.h
@@ -25,6 +29,8 @@ add_executable(GlyphEngine
         src/gameobject/circle/circle.c
         src/gameobject/player/player.h
         src/gameobject/player/player.c
+        src/gameobject/text/text.h
+        src/gameobject/text/text.c
         src/engine/engine.h
         src/engine/engine.c
         src/inputs/inputs.h

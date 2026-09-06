@@ -28,6 +28,8 @@ void rectangle_build(struct GameObject_Rectangle *rectangle, int x, int y, int w
     rectangle->character = character;
     rectangle->filled = 0;
     rectangle->texture = NULL;
+    rectangle->fg = COLOR_DEFAULT;
+    rectangle->bg = COLOR_DEFAULT;
 }
 
 void rectangle_free(struct GameObject_Rectangle *rectangle) {
@@ -84,6 +86,22 @@ struct Texture* rectangle_get_texture(struct GameObject_Rectangle *rectangle) {
     return rectangle->texture;
 }
 
+void rectangle_set_color(struct GameObject_Rectangle *rectangle, Color fg, Color bg) {
+    if (rectangle == NULL) return;
+    rectangle->fg = fg;
+    rectangle->bg = bg;
+}
+
+Color rectangle_get_fg(struct GameObject_Rectangle *rectangle) {
+    if (rectangle == NULL) return COLOR_DEFAULT;
+    return rectangle->fg;
+}
+
+Color rectangle_get_bg(struct GameObject_Rectangle *rectangle) {
+    if (rectangle == NULL) return COLOR_DEFAULT;
+    return rectangle->bg;
+}
+
 struct GameObject_Point* rectangle_get_points(struct GameObject_Rectangle *rectangle) {
     if (rectangle == NULL || rectangle->width <= 0 || rectangle->height <= 0) {
         return NULL;
@@ -112,6 +130,8 @@ struct GameObject_Point* rectangle_get_points(struct GameObject_Rectangle *recta
                     ch = texture_get_pixel(rectangle->texture, dx % rectangle->texture->width, dy % rectangle->texture->height);
                 }
                 point_build(&points[index], rectangle->position.x + dx, rectangle->position.y + dy, ch);
+                points[index].fg = rectangle->fg;
+                points[index].bg = rectangle->bg;
                 index++;
             }
         }

@@ -28,6 +28,8 @@ void ellipse_build(struct GameObject_Ellipse *ellipse, int x, int y, int width, 
     ellipse->character = character;
     ellipse->filled = 0;
     ellipse->texture = NULL;
+    ellipse->fg = COLOR_DEFAULT;
+    ellipse->bg = COLOR_DEFAULT;
 }
 
 void ellipse_free(struct GameObject_Ellipse *ellipse) {
@@ -84,6 +86,22 @@ struct Texture* ellipse_get_texture(struct GameObject_Ellipse *ellipse) {
     return ellipse->texture;
 }
 
+void ellipse_set_color(struct GameObject_Ellipse *ellipse, Color fg, Color bg) {
+    if (ellipse == NULL) return;
+    ellipse->fg = fg;
+    ellipse->bg = bg;
+}
+
+Color ellipse_get_fg(struct GameObject_Ellipse *ellipse) {
+    if (ellipse == NULL) return COLOR_DEFAULT;
+    return ellipse->fg;
+}
+
+Color ellipse_get_bg(struct GameObject_Ellipse *ellipse) {
+    if (ellipse == NULL) return COLOR_DEFAULT;
+    return ellipse->bg;
+}
+
 struct GameObject_Point* ellipse_get_points(struct GameObject_Ellipse *ellipse) {
     if (ellipse == NULL || ellipse->width <= 0 || ellipse->height <= 0) {
         return NULL;
@@ -118,6 +136,8 @@ struct GameObject_Point* ellipse_get_points(struct GameObject_Ellipse *ellipse) 
                     ch = texture_get_pixel(ellipse->texture, dx % ellipse->texture->width, dy % ellipse->texture->height);
                 }
                 point_build(&points[index], (int)x, (int)y, ch);
+                points[index].fg = ellipse->fg;
+                points[index].bg = ellipse->bg;
                 index++;
             }
         }

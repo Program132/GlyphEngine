@@ -3,6 +3,7 @@
 
 #include "../../vec2/vec2.h"
 #include "../../texture/texture.h"
+#include "../../color/color.h"
 
 struct GameObject_Player {
     struct Vector2 position;
@@ -13,6 +14,8 @@ struct GameObject_Player {
     int max_health;
     char character;
     struct Texture *texture;
+    Color fg;
+    Color bg;
 };
 
 struct GameObject_Player* player_new(int x, int y, char character, float speed);
@@ -36,5 +39,9 @@ int player_get_health(struct GameObject_Player *player);
 void player_take_damage(struct GameObject_Player *player, int amount);
 void player_heal(struct GameObject_Player *player, int amount);
 int player_is_alive(struct GameObject_Player *player);
+
+void player_set_color(struct GameObject_Player *player, Color fg, Color bg);
+Color player_get_fg(struct GameObject_Player *player);
+Color player_get_bg(struct GameObject_Player *player);
 
 #endif

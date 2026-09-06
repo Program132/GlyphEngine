@@ -42,23 +42,41 @@ void level_build(struct Level *level, char* levelName, int sizeX, int sizeY, cha
         return;
     }
 
+    level->texts = calloc(MAX_ARRAY_ELEMENTS, sizeof(struct GameObject_Text*));
+    if (level->texts == NULL) {
+        free(level->players);
+        free(level->ellipses);
+        free(level->rectangles);
+        free(level->points);
+        free(level);
+        return;
+    }
+
     level->name = levelName;
     level->sizeX = sizeX;
     level->sizeY = sizeY;
     level->defaultCharacter = defaultCharacter;
+    level->default_fg = COLOR_DEFAULT;
+    level->default_bg = COLOR_DEFAULT;
 }
 
 void level_display(struct Level *level) {
     clearConsoleScreen();
     
-    int row_len = level->sizeX + 1;
-    int buffer_size = row_len * level->sizeY + 1;
+    int max_cell_size = 24;
+    int buffer_size = level->sizeY * (level->sizeX * max_cell_size + 2) + 64;
     char *buffer = malloc(buffer_size);
     if (buffer == NULL) return;
+    int buf_idx = 0;
+
+    Color current_fg = COLOR_DEFAULT;
+    Color current_bg = COLOR_DEFAULT;
 
     for (int y = 0; y < level->sizeY; y++) {
         for (int x = 0; x < level->sizeX; x++) {
             char toPrint = level->defaultCharacter;
+            Color cell_fg = level->default_fg;
+            Color cell_bg = level->default_bg;
             
             for (int i = 0; i < MAX_ARRAY_ELEMENTS; i++) {
                 struct GameObject_Ellipse *ell = level->ellipses[i];
@@ -81,10 +99,14 @@ void level_display(struct Level *level) {
                             char tc = texture_get_pixel(ell->texture, tx, ty);
                             if (tc != ell->texture->transparent_char) {
                                 toPrint = tc;
+                                cell_fg = ell->fg;
+                                cell_bg = ell->bg;
                                 break;
                             }
                         } else if (ell->character != '\0') {
                             toPrint = ell->character;
+                            cell_fg = ell->fg;
+                            cell_bg = ell->bg;
                             break;
                         }
                     }
@@ -107,9 +129,13 @@ void level_display(struct Level *level) {
                                 char tc = texture_get_pixel(rect->texture, tx, ty);
                                 if (tc != rect->texture->transparent_char) {
                                     toPrint = tc;
+                                    cell_fg = rect->fg;
+                                    cell_bg = rect->bg;
                                 }
                             } else if (rect->character != '\0') {
                                 toPrint = rect->character;
+                                cell_fg = rect->fg;
+                                cell_bg = rect->bg;
                             }
                         }
                     }
@@ -121,6 +147,8 @@ void level_display(struct Level *level) {
                 if (pt != NULL && pt->character != '\0') {
                     if (pt->position.x == x && pt->position.y == y) {
                         toPrint = pt->character;
+                        cell_fg = pt->fg;
+                        cell_bg = pt->bg;
                     }
                 }
             }
@@ -136,21 +164,59 @@ void level_display(struct Level *level) {
                             char tc = texture_get_pixel(pl->texture, px, py);
                             if (tc != pl->texture->transparent_char) {
                                 toPrint = tc;
+                                cell_fg = pl->fg;
+                                cell_bg = pl->bg;
                             }
                         }
                     } else if (pl->character != '\0') {
                         if (pl->position.x == x && pl->position.y == y) {
                             toPrint = pl->character;
+                            cell_fg = pl->fg;
+                            cell_bg = pl->bg;
+                        }
+                    }
+                }
+            }
+
+            if (level->texts != NULL) {
+                for (int t = 0; t < MAX_ARRAY_ELEMENTS; t++) {
+                    struct GameObject_Text *txt = level->texts[t];
+                    if (txt != NULL && txt->text[0] != '\0' && y == txt->position.y) {
+                        int len = (int)strlen(txt->text);
+                        if (x >= txt->position.x && x < txt->position.x + len) {
+                            toPrint = txt->text[x - txt->position.x];
+                            cell_fg = txt->fg;
+                            cell_bg = txt->bg;
                         }
                     }
                 }
             }
             
-            buffer[y * row_len + x] = toPrint;
+            if (cell_fg != current_fg) {
+                const char *fg_ansi = color_to_ansi_fg(cell_fg);
+                while (*fg_ansi) buffer[buf_idx++] = *fg_ansi++;
+                current_fg = cell_fg;
+            }
+            if (cell_bg != current_bg) {
+                const char *bg_ansi = color_to_ansi_bg(cell_bg);
+                while (*bg_ansi) buffer[buf_idx++] = *bg_ansi++;
+                current_bg = cell_bg;
+            }
+            buffer[buf_idx++] = toPrint;
         }
-        buffer[y * row_len + level->sizeX] = '\n';
+        if (current_fg != COLOR_DEFAULT || current_bg != COLOR_DEFAULT) {
+            const char *reset_ansi = color_reset_ansi();
+            while (*reset_ansi) buffer[buf_idx++] = *reset_ansi++;
+            current_fg = COLOR_DEFAULT;
+            current_bg = COLOR_DEFAULT;
+        }
+        buffer[buf_idx++] = '\n';
     }
-    buffer[buffer_size - 1] = '\0';
+    if (current_fg != COLOR_DEFAULT || current_bg != COLOR_DEFAULT) {
+        const char *reset_ansi = color_reset_ansi();
+        while (*reset_ansi) buffer[buf_idx++] = *reset_ansi++;
+    }
+    buffer[buf_idx] = '\0';
     
     printf("%s", buffer);
     fflush(stdout);
@@ -308,6 +374,26 @@ struct GameObject_Player* level_get_player(struct Level *level, struct Vector2 p
     return NULL;
 }
 
+void level_add_text(struct Level *level, struct GameObject_Text *text) {
+    if (level == NULL || text == NULL) return;
+    for (int i = 0; i < MAX_ARRAY_ELEMENTS; i++) {
+        if (level->texts[i] == NULL) {
+            level->texts[i] = text;
+            return;
+        }
+    }
+}
+
+void level_remove_text(struct Level *level, struct GameObject_Text *text) {
+    if (level == NULL || text == NULL) return;
+    for (int i = 0; i < MAX_ARRAY_ELEMENTS; i++) {
+        if (level->texts[i] == text) {
+            level->texts[i] = NULL;
+            return;
+        }
+    }
+}
+
 char* level_get_name(struct Level *level) {
     return level->name;
 }
@@ -338,6 +424,22 @@ void level_set_sizeY(struct Level *level, int sizeY) {
 
 void level_set_defaultCharacter(struct Level *level, char defaultCharacter) {
     level->defaultCharacter = defaultCharacter;
+}
+
+void level_set_default_color(struct Level *level, Color fg, Color bg) {
+    if (level == NULL) return;
+    level->default_fg = fg;
+    level->default_bg = bg;
+}
+
+Color level_get_default_fg(struct Level *level) {
+    if (level == NULL) return COLOR_DEFAULT;
+    return level->default_fg;
+}
+
+Color level_get_default_bg(struct Level *level) {
+    if (level == NULL) return COLOR_DEFAULT;
+    return level->default_bg;
 }
 
 void level_free(struct Level *level) {
@@ -377,6 +479,15 @@ void level_free(struct Level *level) {
             }
         }
         free(level->players);
+    }
+
+    if (level->texts != NULL) {
+        for (int i = 0; i < MAX_ARRAY_ELEMENTS; i++) {
+            if (level->texts[i] != NULL) {
+                text_free(level->texts[i]);
+            }
+        }
+        free(level->texts);
     }
     
     free(level);

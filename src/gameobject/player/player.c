@@ -26,6 +26,8 @@ void player_build(struct GameObject_Player *player, int x, int y, char character
     player->texture = NULL;
     player->health = 100;
     player->max_health = 100;
+    player->fg = COLOR_DEFAULT;
+    player->bg = COLOR_DEFAULT;
 }
 
 void player_free(struct GameObject_Player *player) {
@@ -116,4 +118,20 @@ void player_heal(struct GameObject_Player *player, int amount) {
 int player_is_alive(struct GameObject_Player *player) {
     if (player == NULL) return 0;
     return player->health > 0;
+}
+
+void player_set_color(struct GameObject_Player *player, Color fg, Color bg) {
+    if (player == NULL) return;
+    player->fg = fg;
+    player->bg = bg;
+}
+
+Color player_get_fg(struct GameObject_Player *player) {
+    if (player == NULL) return COLOR_DEFAULT;
+    return player->fg;
+}
+
+Color player_get_bg(struct GameObject_Player *player) {
+    if (player == NULL) return COLOR_DEFAULT;
+    return player->bg;
 }

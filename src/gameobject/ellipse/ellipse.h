@@ -3,6 +3,7 @@
 
 #include "../point/point.h"
 #include "../../texture/texture.h"
+#include "../../color/color.h"
 
 struct GameObject_Ellipse {
     struct Vector2 position;
@@ -11,6 +12,8 @@ struct GameObject_Ellipse {
     char character;
     int filled;
     struct Texture *texture;
+    Color fg;
+    Color bg;
 };
 
 struct GameObject_Ellipse* ellipse_new(int x, int y, int width, int height, char character);
@@ -29,6 +32,9 @@ void ellipse_enable_filled(struct GameObject_Ellipse *ellipse);
 void ellipse_disable_filled(struct GameObject_Ellipse *ellipse);
 void ellipse_set_texture(struct GameObject_Ellipse *ellipse, struct Texture *texture);
 struct Texture* ellipse_get_texture(struct GameObject_Ellipse *ellipse);
+void ellipse_set_color(struct GameObject_Ellipse *ellipse, Color fg, Color bg);
+Color ellipse_get_fg(struct GameObject_Ellipse *ellipse);
+Color ellipse_get_bg(struct GameObject_Ellipse *ellipse);
 struct GameObject_Point* ellipse_get_points(struct GameObject_Ellipse *ellipse);
 
 #endif
