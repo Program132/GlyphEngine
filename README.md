@@ -112,3 +112,4 @@ Example programs are available in the `examples/` directory:
 - `examples/03_textured_player.c`: Textured player sprite with smooth delta-time movement.
 - `examples/04_textured_world.c`: Textured platforms, brick pillars, and moving character.
 - `examples/05_dungeon_crawler.c`: Dungeon crawler with textured walls, player health, and items.
+- `examples/06_textured_shapes.c`: Textured circle, ellipse, and square shapes.
