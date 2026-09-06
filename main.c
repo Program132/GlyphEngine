@@ -1,55 +1,90 @@
 #include "src/engine/engine.h"
-#include "src/gameobject/square/square.h"
-#include "src/gameobject/circle/circle.h"
 #include "src/inputs/inputs.h"
-#include <stdio.h>
+#include "src/gameobject/player/player.h"
+#include "src/gameobject/rectangle/rectangle.h"
+#include "src/gameobject/point/point.h"
+#include "src/texture/texture.h"
 
-struct GameObject_Rectangle* my_square;
-struct GameObject_Ellipse* my_circle;
+struct GameObject_Player *hero;
+struct GameObject_Point *coin;
 
-float sq_x = 2.0f, sq_y = 2.0f;
-float sq_dx = 15.0f, sq_dy = 10.0f;
-
-float ci_x = 25.0f, ci_y = 15.0f;
-float ci_dx = -12.0f, ci_dy = -15.0f;
-
-void update_shapes(struct Engine* engine, float delta_time) {
+void update(struct Engine *engine, float dt) {
     if (input_is_key_down(KEY_ESCAPE)) {
         engine_stop(engine);
         return;
     }
 
-    sq_x += sq_dx * delta_time;
-    sq_y += sq_dy * delta_time;
-    if (sq_x <= 0 || sq_x >= engine->width - 5) sq_dx = -sq_dx;
-    if (sq_y <= 0 || sq_y >= engine->height - 5) sq_dy = -sq_dy;
+    float dx = 0.0f;
+    float dy = 0.0f;
 
-    ci_x += ci_dx * delta_time;
-    ci_y += ci_dy * delta_time;
-    if (ci_x <= 0 || ci_x >= engine->width - 6) ci_dx = -ci_dx;
-    if (ci_y <= 0 || ci_y >= engine->height - 6) ci_dy = -ci_dy;
+    if (input_is_key_down(KEY_Z) || input_is_key_down(KEY_UP)) dy -= 1.0f;
+    if (input_is_key_down(KEY_S) || input_is_key_down(KEY_DOWN)) dy += 1.0f;
+    if (input_is_key_down(KEY_Q) || input_is_key_down(KEY_LEFT)) dx -= 1.0f;
+    if (input_is_key_down(KEY_D) || input_is_key_down(KEY_RIGHT)) dx += 1.0f;
 
-    my_square->position.x = (int)sq_x;
-    my_square->position.y = (int)sq_y;
+    player_move(hero, dx, dy, dt);
 
-    my_circle->position.x = (int)ci_x;
-    my_circle->position.y = (int)ci_y;
+    if (hero->position.x < 3) player_set_position(hero, 3, hero->position.y);
+    if (hero->position.y < 3) player_set_position(hero, hero->position.x, 3);
+    if (hero->position.x > engine->width - 5) player_set_position(hero, engine->width - 5, hero->position.y);
+    if (hero->position.y > engine->height - 5) player_set_position(hero, hero->position.x, engine->height - 5);
+
+    if (coin != NULL && hero->position.x == coin->position.x && hero->position.y == coin->position.y) {
+        player_heal(hero, 10);
+        coin->position.x = 8 + (hero->position.x * 7) % 30;
+        coin->position.y = 5 + (hero->position.y * 3) % 10;
+    }
 }
 
 int main() {
-    struct Level* my_level = level_new("Rebounds", 50, 25, ' ');
-    struct Engine* my_engine = engine_new(my_level, 50, 25);
+    struct Level *level = level_new("Dungeon Crawler", 50, 20, '.');
+    struct Engine *engine = engine_new(level, 50, 20);
 
-    my_square = square_new((int)sq_x, (int)sq_y, 5, 'O');
-    my_circle = circle_new((int)ci_x, (int)ci_y, 6, '@');
+    const char *wall_pattern =
+        "####\n"
+        "#--#\n"
+        "#--#\n"
+        "####";
+    struct Texture *wall_tex = texture_new(4, 4, wall_pattern, ' ');
 
-    level_add_rectangle(my_level, my_square);
-    level_add_ellipse(my_level, my_circle);
+    struct GameObject_Rectangle *top_wall = rectangle_new(0, 0, 50, 2, '#');
+    rectangle_enable_filled(top_wall);
+    rectangle_set_texture(top_wall, wall_tex);
+    level_add_rectangle(level, top_wall);
 
-    engine_set_update_callback(my_engine, update_shapes);
-    engine_run(my_engine, 30);
+    struct GameObject_Rectangle *bottom_wall = rectangle_new(0, 18, 50, 2, '#');
+    rectangle_enable_filled(bottom_wall);
+    rectangle_set_texture(bottom_wall, wall_tex);
+    level_add_rectangle(level, bottom_wall);
 
-    engine_free(my_engine);
+    struct GameObject_Rectangle *left_wall = rectangle_new(0, 0, 2, 20, '#');
+    rectangle_enable_filled(left_wall);
+    rectangle_set_texture(left_wall, wall_tex);
+    level_add_rectangle(level, left_wall);
+
+    struct GameObject_Rectangle *right_wall = rectangle_new(48, 0, 2, 20, '#');
+    rectangle_enable_filled(right_wall);
+    rectangle_set_texture(right_wall, wall_tex);
+    level_add_rectangle(level, right_wall);
+
+    coin = point_new(25, 10, '$');
+    level_add_point(level, coin);
+
+    const char *knight_art =
+        "(+)\n"
+        "/|\\\n"
+        "/ \\";
+    struct Texture *knight_tex = texture_new(3, 3, knight_art, ' ');
+
+    hero = player_new_textured(10, 10, knight_tex, 15.0f);
+    player_set_health(hero, 80);
+    level_add_player(level, hero);
+
+    engine_set_update_callback(engine, update);
+    engine_run(engine, 30);
+
+    texture_free(wall_tex);
+    engine_free(engine);
 
     return 0;
 }
