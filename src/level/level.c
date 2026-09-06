@@ -58,19 +58,83 @@ void level_build(struct Level *level, char* levelName, int sizeX, int sizeY, cha
     level->defaultCharacter = defaultCharacter;
     level->default_fg = COLOR_DEFAULT;
     level->default_bg = COLOR_DEFAULT;
+
+    for (int i = 0; i < MAX_HUD_LINES; i++) {
+        level->hud_top[i].is_active = 0;
+        level->hud_top[i].text[0] = '\0';
+        level->hud_top[i].fg = COLOR_DEFAULT;
+        level->hud_top[i].bg = COLOR_DEFAULT;
+        level->hud_bottom[i].is_active = 0;
+        level->hud_bottom[i].text[0] = '\0';
+        level->hud_bottom[i].fg = COLOR_DEFAULT;
+        level->hud_bottom[i].bg = COLOR_DEFAULT;
+    }
+    level->hud_top_separator = '\0';
+    level->hud_top_sep_fg = COLOR_DEFAULT;
+    level->hud_top_sep_bg = COLOR_DEFAULT;
+    level->hud_bottom_separator = '\0';
+    level->hud_bottom_sep_fg = COLOR_DEFAULT;
+    level->hud_bottom_sep_bg = COLOR_DEFAULT;
 }
 
 void level_display(struct Level *level) {
     clearConsoleScreen();
     
     int max_cell_size = 24;
-    int buffer_size = level->sizeY * (level->sizeX * max_cell_size + 2) + 64;
+    int buffer_size = (level->sizeY + MAX_HUD_LINES * 2 + 4) * (level->sizeX * max_cell_size + 64) + 1024;
     char *buffer = malloc(buffer_size);
     if (buffer == NULL) return;
     int buf_idx = 0;
 
     Color current_fg = COLOR_DEFAULT;
     Color current_bg = COLOR_DEFAULT;
+
+    for (int i = 0; i < MAX_HUD_LINES; i++) {
+        if (level->hud_top[i].is_active) {
+            if (level->hud_top[i].fg != current_fg) {
+                const char *fg_ansi = color_to_ansi_fg(level->hud_top[i].fg);
+                while (*fg_ansi) buffer[buf_idx++] = *fg_ansi++;
+                current_fg = level->hud_top[i].fg;
+            }
+            if (level->hud_top[i].bg != current_bg) {
+                const char *bg_ansi = color_to_ansi_bg(level->hud_top[i].bg);
+                while (*bg_ansi) buffer[buf_idx++] = *bg_ansi++;
+                current_bg = level->hud_top[i].bg;
+            }
+            const char *str = level->hud_top[i].text;
+            while (*str) buffer[buf_idx++] = *str++;
+            if (current_fg != COLOR_DEFAULT || current_bg != COLOR_DEFAULT) {
+                const char *reset_ansi = color_reset_ansi();
+                while (*reset_ansi) buffer[buf_idx++] = *reset_ansi++;
+                current_fg = COLOR_DEFAULT;
+                current_bg = COLOR_DEFAULT;
+            }
+            buffer[buf_idx++] = '\n';
+        }
+    }
+
+    if (level->hud_top_separator != '\0') {
+        if (level->hud_top_sep_fg != current_fg) {
+            const char *fg_ansi = color_to_ansi_fg(level->hud_top_sep_fg);
+            while (*fg_ansi) buffer[buf_idx++] = *fg_ansi++;
+            current_fg = level->hud_top_sep_fg;
+        }
+        if (level->hud_top_sep_bg != current_bg) {
+            const char *bg_ansi = color_to_ansi_bg(level->hud_top_sep_bg);
+            while (*bg_ansi) buffer[buf_idx++] = *bg_ansi++;
+            current_bg = level->hud_top_sep_bg;
+        }
+        for (int x = 0; x < level->sizeX; x++) {
+            buffer[buf_idx++] = level->hud_top_separator;
+        }
+        if (current_fg != COLOR_DEFAULT || current_bg != COLOR_DEFAULT) {
+            const char *reset_ansi = color_reset_ansi();
+            while (*reset_ansi) buffer[buf_idx++] = *reset_ansi++;
+            current_fg = COLOR_DEFAULT;
+            current_bg = COLOR_DEFAULT;
+        }
+        buffer[buf_idx++] = '\n';
+    }
 
     for (int y = 0; y < level->sizeY; y++) {
         for (int x = 0; x < level->sizeX; x++) {
@@ -212,6 +276,54 @@ void level_display(struct Level *level) {
         }
         buffer[buf_idx++] = '\n';
     }
+
+    if (level->hud_bottom_separator != '\0') {
+        if (level->hud_bottom_sep_fg != current_fg) {
+            const char *fg_ansi = color_to_ansi_fg(level->hud_bottom_sep_fg);
+            while (*fg_ansi) buffer[buf_idx++] = *fg_ansi++;
+            current_fg = level->hud_bottom_sep_fg;
+        }
+        if (level->hud_bottom_sep_bg != current_bg) {
+            const char *bg_ansi = color_to_ansi_bg(level->hud_bottom_sep_bg);
+            while (*bg_ansi) buffer[buf_idx++] = *bg_ansi++;
+            current_bg = level->hud_bottom_sep_bg;
+        }
+        for (int x = 0; x < level->sizeX; x++) {
+            buffer[buf_idx++] = level->hud_bottom_separator;
+        }
+        if (current_fg != COLOR_DEFAULT || current_bg != COLOR_DEFAULT) {
+            const char *reset_ansi = color_reset_ansi();
+            while (*reset_ansi) buffer[buf_idx++] = *reset_ansi++;
+            current_fg = COLOR_DEFAULT;
+            current_bg = COLOR_DEFAULT;
+        }
+        buffer[buf_idx++] = '\n';
+    }
+
+    for (int i = 0; i < MAX_HUD_LINES; i++) {
+        if (level->hud_bottom[i].is_active) {
+            if (level->hud_bottom[i].fg != current_fg) {
+                const char *fg_ansi = color_to_ansi_fg(level->hud_bottom[i].fg);
+                while (*fg_ansi) buffer[buf_idx++] = *fg_ansi++;
+                current_fg = level->hud_bottom[i].fg;
+            }
+            if (level->hud_bottom[i].bg != current_bg) {
+                const char *bg_ansi = color_to_ansi_bg(level->hud_bottom[i].bg);
+                while (*bg_ansi) buffer[buf_idx++] = *bg_ansi++;
+                current_bg = level->hud_bottom[i].bg;
+            }
+            const char *str = level->hud_bottom[i].text;
+            while (*str) buffer[buf_idx++] = *str++;
+            if (current_fg != COLOR_DEFAULT || current_bg != COLOR_DEFAULT) {
+                const char *reset_ansi = color_reset_ansi();
+                while (*reset_ansi) buffer[buf_idx++] = *reset_ansi++;
+                current_fg = COLOR_DEFAULT;
+                current_bg = COLOR_DEFAULT;
+            }
+            buffer[buf_idx++] = '\n';
+        }
+    }
+
     if (current_fg != COLOR_DEFAULT || current_bg != COLOR_DEFAULT) {
         const char *reset_ansi = color_reset_ansi();
         while (*reset_ansi) buffer[buf_idx++] = *reset_ansi++;
@@ -391,6 +503,43 @@ void level_remove_text(struct Level *level, struct GameObject_Text *text) {
             level->texts[i] = NULL;
             return;
         }
+    }
+}
+
+void level_set_hud_text(struct Level *level, HudPosition pos, int line_index, const char *text, Color fg, Color bg) {
+    if (level == NULL || line_index < 0 || line_index >= MAX_HUD_LINES) return;
+    struct HudLine *line = (pos == HUD_TOP) ? &level->hud_top[line_index] : &level->hud_bottom[line_index];
+    if (text == NULL || text[0] == '\0') {
+        line->is_active = 0;
+        line->text[0] = '\0';
+    } else {
+        line->is_active = 1;
+        strncpy(line->text, text, sizeof(line->text) - 1);
+        line->text[sizeof(line->text) - 1] = '\0';
+        line->fg = fg;
+        line->bg = bg;
+    }
+}
+
+void level_clear_hud(struct Level *level, HudPosition pos) {
+    if (level == NULL) return;
+    struct HudLine *target = (pos == HUD_TOP) ? level->hud_top : level->hud_bottom;
+    for (int i = 0; i < MAX_HUD_LINES; i++) {
+        target[i].is_active = 0;
+        target[i].text[0] = '\0';
+    }
+}
+
+void level_set_hud_separator(struct Level *level, HudPosition pos, char separator_char, Color fg, Color bg) {
+    if (level == NULL) return;
+    if (pos == HUD_TOP) {
+        level->hud_top_separator = separator_char;
+        level->hud_top_sep_fg = fg;
+        level->hud_top_sep_bg = bg;
+    } else {
+        level->hud_bottom_separator = separator_char;
+        level->hud_bottom_sep_fg = fg;
+        level->hud_bottom_sep_bg = bg;
     }
 }
 

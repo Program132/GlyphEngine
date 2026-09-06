@@ -14,11 +14,15 @@
     #error "Plateforme non supportée"
 #endif
 
+struct LevelUI;
+
 struct Engine {
     struct Level *current_level;
+    struct LevelUI *current_ui;
     int width;
     int height;
     int is_running;
+    int exit_on_escape;
     void (*on_update)(struct Engine* engine, float delta_time);
 };
 
@@ -30,6 +34,10 @@ void engine_run(struct Engine* engine, int fps);
 void engine_stop(struct Engine* engine);
 
 void engine_set_level(struct Engine* engine, struct Level *new_level);
+void engine_set_level_ui(struct Engine* engine, struct LevelUI *ui);
+struct LevelUI* engine_get_level_ui(struct Engine* engine);
+void engine_set_exit_on_escape(struct Engine* engine, int enabled);
+int engine_get_exit_on_escape(struct Engine* engine);
 void engine_set_update_callback(struct Engine* engine, void (*update_func)(struct Engine*, float));
 
 #endif

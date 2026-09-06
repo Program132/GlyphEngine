@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "../inputs/inputs.h"
 #include "../utils/utils.h"
+#include "../levelui/levelui.h"
 
 struct Engine* engine_new(struct Level *current_level, int width, int height) {
     struct Engine* engine = (struct Engine*)malloc(sizeof(struct Engine));
@@ -13,9 +14,11 @@ struct Engine* engine_new(struct Level *current_level, int width, int height) {
 
 void engine_build(struct Engine* engine, struct Level *current_level, int width, int height) {
     engine->current_level = current_level;
+    engine->current_ui = NULL;
     engine->width = width;
     engine->height = height;
     engine->is_running = 0;
+    engine->exit_on_escape = 1;
     engine->on_update = NULL;
 }
 
@@ -23,6 +26,9 @@ void engine_free(struct Engine* engine) {
     if (engine != NULL) {
         if (engine->current_level != NULL) {
             level_free(engine->current_level);
+        }
+        if (engine->current_ui != NULL) {
+            level_ui_free(engine->current_ui);
         }
         free(engine);
     }
@@ -38,6 +44,28 @@ void engine_set_level(struct Engine* engine, struct Level *new_level) {
     if (engine != NULL) {
         engine->current_level = new_level;
     }
+}
+
+void engine_set_level_ui(struct Engine* engine, struct LevelUI *ui) {
+    if (engine != NULL) {
+        engine->current_ui = ui;
+    }
+}
+
+struct LevelUI* engine_get_level_ui(struct Engine* engine) {
+    if (engine == NULL) return NULL;
+    return engine->current_ui;
+}
+
+void engine_set_exit_on_escape(struct Engine* engine, int enabled) {
+    if (engine != NULL) {
+        engine->exit_on_escape = enabled;
+    }
+}
+
+int engine_get_exit_on_escape(struct Engine* engine) {
+    if (engine == NULL) return 0;
+    return engine->exit_on_escape;
 }
 
 void engine_set_update_callback(struct Engine* engine, void (*update_func)(struct Engine*, float)) {
@@ -73,6 +101,11 @@ void engine_run(struct Engine* engine, int fps) {
     hideCursor();
 
     while (engine->is_running) {
+        if (engine->exit_on_escape && input_is_key_down(KEY_ESCAPE)) {
+            engine_stop(engine);
+            break;
+        }
+
         double current_time = get_time_in_seconds();
         float delta_time = (float)(current_time - last_time);
         last_time = current_time;
@@ -81,8 +114,12 @@ void engine_run(struct Engine* engine, int fps) {
             engine->on_update(engine, delta_time);
         }
 
-        if (engine->is_running && engine->current_level != NULL) {
-            level_display(engine->current_level);
+        if (engine->is_running) {
+            if (engine->current_ui != NULL) {
+                level_ui_display(engine->current_ui);
+            } else if (engine->current_level != NULL) {
+                level_display(engine->current_level);
+            }
         }
 
         double end_time = get_time_in_seconds();
