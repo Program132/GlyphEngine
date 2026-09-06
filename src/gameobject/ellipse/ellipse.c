@@ -11,12 +11,23 @@ struct GameObject_Ellipse* ellipse_new(int x, int y, int width, int height, char
     return ellipse;
 }
 
+struct GameObject_Ellipse* ellipse_new_textured(int x, int y, int width, int height, struct Texture *texture) {
+    struct GameObject_Ellipse* ellipse = malloc(sizeof(struct GameObject_Ellipse));
+    if (ellipse == NULL) {
+        return NULL;
+    }
+    ellipse_build(ellipse, x, y, width, height, '\0');
+    ellipse->texture = texture;
+    return ellipse;
+}
+
 void ellipse_build(struct GameObject_Ellipse *ellipse, int x, int y, int width, int height, char character) {
     vec2_build(&ellipse->position, x, y);
     ellipse->width = width;
     ellipse->height = height;
     ellipse->character = character;
     ellipse->filled = 0;
+    ellipse->texture = NULL;
 }
 
 void ellipse_free(struct GameObject_Ellipse *ellipse) {
@@ -63,6 +74,16 @@ void ellipse_disable_filled(struct GameObject_Ellipse *ellipse) {
     ellipse->filled = 0;
 }
 
+void ellipse_set_texture(struct GameObject_Ellipse *ellipse, struct Texture *texture) {
+    if (ellipse == NULL) return;
+    ellipse->texture = texture;
+}
+
+struct Texture* ellipse_get_texture(struct GameObject_Ellipse *ellipse) {
+    if (ellipse == NULL) return NULL;
+    return ellipse->texture;
+}
+
 struct GameObject_Point* ellipse_get_points(struct GameObject_Ellipse *ellipse) {
     if (ellipse == NULL || ellipse->width <= 0 || ellipse->height <= 0) {
         return NULL;
@@ -89,11 +110,14 @@ struct GameObject_Point* ellipse_get_points(struct GameObject_Ellipse *ellipse) 
             double val = dx_norm * dx_norm + dy_norm * dy_norm;
             
             bool inside = val <= 1.0;
-
             bool border = val >= 0.5 && val <= 1.2;
 
             if ((ellipse->filled && inside) || (!ellipse->filled && border && inside)) {
-                point_build(&points[index], x, y, ellipse->character);
+                char ch = ellipse->character;
+                if (ellipse->texture != NULL) {
+                    ch = texture_get_pixel(ellipse->texture, dx % ellipse->texture->width, dy % ellipse->texture->height);
+                }
+                point_build(&points[index], (int)x, (int)y, ch);
                 index++;
             }
         }

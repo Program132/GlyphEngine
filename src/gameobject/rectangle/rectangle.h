@@ -14,6 +14,7 @@ struct GameObject_Rectangle {
 };
 
 struct GameObject_Rectangle* rectangle_new(int x, int y, int width, int height, char character);
+struct GameObject_Rectangle* rectangle_new_textured(int x, int y, int width, int height, struct Texture *texture);
 void rectangle_build(struct GameObject_Rectangle *rectangle, int x, int y, int width, int height, char character);
 void rectangle_free(struct GameObject_Rectangle *rectangle);
 struct Vector2 rectangle_get_position(struct GameObject_Rectangle *rectangle);

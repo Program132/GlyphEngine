@@ -62,7 +62,7 @@ void level_display(struct Level *level) {
             
             for (int i = 0; i < MAX_ARRAY_ELEMENTS; i++) {
                 struct GameObject_Ellipse *ell = level->ellipses[i];
-                if (ell != NULL && ell->character != '\0') {
+                if (ell != NULL) {
                     double cx = ell->position.x + (ell->width - 1) / 2.0;
                     double cy = ell->position.y + (ell->height - 1) / 2.0;
                     double rx = ell->width / 2.0;
@@ -75,8 +75,18 @@ void level_display(struct Level *level) {
                     int border = (val >= 0.5 && val <= 1.2);
 
                     if ((ell->filled && inside) || (!ell->filled && border && inside)) {
-                        toPrint = ell->character;
-                        break;
+                        if (ell->texture != NULL) {
+                            int tx = (x - ell->position.x) % ell->texture->width;
+                            int ty = (y - ell->position.y) % ell->texture->height;
+                            char tc = texture_get_pixel(ell->texture, tx, ty);
+                            if (tc != ell->texture->transparent_char) {
+                                toPrint = tc;
+                                break;
+                            }
+                        } else if (ell->character != '\0') {
+                            toPrint = ell->character;
+                            break;
+                        }
                     }
                 }
             }

@@ -4,6 +4,7 @@
 #include "../rectangle/rectangle.h"
 
 struct GameObject_Rectangle* square_new(int x, int y, int size, char character);
+struct GameObject_Rectangle* square_new_textured(int x, int y, int size, struct Texture *texture);
 void square_build(struct GameObject_Rectangle *square, int x, int y, int size, char character);
 
 #endif

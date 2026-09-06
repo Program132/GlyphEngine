@@ -11,6 +11,16 @@ struct GameObject_Rectangle* rectangle_new(int x, int y, int width, int height, 
     return rectangle;
 }
 
+struct GameObject_Rectangle* rectangle_new_textured(int x, int y, int width, int height, struct Texture *texture) {
+    struct GameObject_Rectangle* rectangle = malloc(sizeof(struct GameObject_Rectangle));
+    if (rectangle == NULL) {
+        return NULL;
+    }
+    rectangle_build(rectangle, x, y, width, height, '\0');
+    rectangle->texture = texture;
+    return rectangle;
+}
+
 void rectangle_build(struct GameObject_Rectangle *rectangle, int x, int y, int width, int height, char character) {
     vec2_build(&rectangle->position, x, y);
     rectangle->width = width;
@@ -97,7 +107,11 @@ struct GameObject_Point* rectangle_get_points(struct GameObject_Rectangle *recta
             bool is_border = (dx == 0 || dx == rectangle->width - 1 || dy == 0 || dy == rectangle->height - 1);
 
             if (rectangle->filled || is_border) {
-                point_build(&points[index], rectangle->position.x + dx, rectangle->position.y + dy, rectangle->character);
+                char ch = rectangle->character;
+                if (rectangle->texture != NULL) {
+                    ch = texture_get_pixel(rectangle->texture, dx % rectangle->texture->width, dy % rectangle->texture->height);
+                }
+                point_build(&points[index], rectangle->position.x + dx, rectangle->position.y + dy, ch);
                 index++;
             }
         }
