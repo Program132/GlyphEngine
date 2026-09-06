@@ -15,6 +15,11 @@
 | defaultCharacter | char                          | Default character used for empty/background cells   |
 | default_fg       | Color                         | Default foreground color for background cells       |
 | default_bg       | Color                         | Default background color for background cells       |
+| is_camera_enabled| int                           | Flag indicating whether viewport/camera is enabled  |
+| viewport_w       | int                           | Width of visible camera viewport on console         |
+| viewport_h       | int                           | Height of visible camera viewport on console        |
+| cam_x            | float                         | Top-left world X coordinate of camera viewport      |
+| cam_y            | float                         | Top-left world Y coordinate of camera viewport      |
 
 # Constants
 
@@ -61,6 +66,9 @@
 | level_set_default_color    | void                         | struct Level *level, Color fg, Color bg                                                 | Sets the default foreground and background colors for background cells                     |
 | level_get_default_fg       | Color                        | struct Level *level                                                                     | Returns the default foreground color                                                      |
 | level_get_default_bg       | Color                        | struct Level *level                                                                     | Returns the default background color                                                      |
+| level_set_camera           | void                         | struct Level *level, float cam_x, float cam_y                                           | Sets the top-left coordinate of the camera viewport.                                     |
+| level_enable_camera        | void                         | struct Level *level, int viewport_w, int viewport_h                                     | Enables viewport camera rendering with the given window dimensions.                       |
+| level_disable_camera       | void                         | struct Level *level                                                                     | Disables camera mode and restores standard whole-level rendering.                         |
 | level_free                 | void                         | struct Level *level                                                                     | Frees the level, its internal arrays, and all contained game objects (`*_free`)          |
 
 ## Memory Management

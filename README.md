@@ -13,6 +13,7 @@ Minimalist 2D text-based game engine for the terminal (C99).
 - In-game Text & HUD labels (`GameObject_Text`) with custom positioning and colors
 - Off-canvas HUD system (`HUD_TOP`, `HUD_BOTTOM`) with full-width separators outside the game grid
 - Dedicated `LevelUI` scene system with interactive buttons (`UIButton`), styled panels (`UIPanel`), and keyboard navigation
+- Large-scale worlds (`LevelWorld`) with viewport scrolling and smooth delta-time camera tracking
 - Projectile system (`GameObject_Projectile`) with sub-pixel float velocities, lifetime, damage, and collision checks
 - Particle system (`ParticleSystem`) with burst presets (explosions, sparkles), fading ANSI colors, and pool management
 - Dedicated `GameObject_Player` with sub-pixel delta movement and health
@@ -101,6 +102,7 @@ Detailed documentation for each module is located in the [doc/](doc/) directory:
   - [Engine](doc/engine.md) — Main loop, framerate, and callbacks.
   - [Level](doc/level.md) — Object container, grid, rendering, and off-canvas HUD.
   - [LevelUI](doc/levelui.md) — GUI scenes, buttons, styled panels, and keyboard navigation.
+  - [LevelWorld](doc/levelworld.md) — Large maps, viewport scrolling, and smooth camera tracking.
 - **Physics & Styling**
   - [Collision](doc/collision.md) — 2D intersection routines, boundary checks, and clamping.
   - [Color](doc/color.md) — ANSI 16-color enumeration and styling helpers.
@@ -134,3 +136,4 @@ Example programs are available in the `examples/` directory:
 - `examples/07_collisions_and_colors.c`: Colored level, colored obstacles, and real-time collision detection.
 - `examples/08_level_ui_menu.c`: Interactive GUI menu with buttons, panels, keyboard navigation, and level transition.
 - `examples/09_projectiles_and_particles.c`: Real-time space shooter featuring lasers, enemy projectiles, and particle explosions.
+- `examples/10_camera_and_world.c`: Vast open world (140x45) with landmarks, collectible gems, and smooth camera following.
