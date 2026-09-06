@@ -30,6 +30,7 @@ void rectangle_build(struct GameObject_Rectangle *rectangle, int x, int y, int w
     rectangle->texture = NULL;
     rectangle->fg = COLOR_DEFAULT;
     rectangle->bg = COLOR_DEFAULT;
+    rectangle->is_solid = 1;
 }
 
 void rectangle_free(struct GameObject_Rectangle *rectangle) {
@@ -138,4 +139,14 @@ struct GameObject_Point* rectangle_get_points(struct GameObject_Rectangle *recta
     }
 
     return points;
+}
+
+void rectangle_set_solid(struct GameObject_Rectangle *rectangle, int is_solid) {
+    if (rectangle == NULL) return;
+    rectangle->is_solid = is_solid;
+}
+
+int rectangle_is_solid(struct GameObject_Rectangle *rectangle) {
+    if (rectangle == NULL) return 0;
+    return rectangle->is_solid;
 }

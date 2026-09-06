@@ -14,6 +14,7 @@ struct GameObject_Rectangle {
     struct Texture *texture;
     Color fg;
     Color bg;
+    int is_solid;
 };
 
 struct GameObject_Rectangle* rectangle_new(int x, int y, int width, int height, char character);
@@ -35,6 +36,8 @@ struct Texture* rectangle_get_texture(struct GameObject_Rectangle *rectangle);
 void rectangle_set_color(struct GameObject_Rectangle *rectangle, Color fg, Color bg);
 Color rectangle_get_fg(struct GameObject_Rectangle *rectangle);
 Color rectangle_get_bg(struct GameObject_Rectangle *rectangle);
+void rectangle_set_solid(struct GameObject_Rectangle *rectangle, int is_solid);
+int rectangle_is_solid(struct GameObject_Rectangle *rectangle);
 struct GameObject_Point* rectangle_get_points(struct GameObject_Rectangle *rectangle);
 
 #endif

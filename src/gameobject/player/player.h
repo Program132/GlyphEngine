@@ -16,6 +16,12 @@ struct GameObject_Player {
     struct Texture *texture;
     Color fg;
     Color bg;
+    float vx;
+    float vy;
+    float jump_power;
+    float gravity;
+    int use_gravity;
+    int is_grounded;
 };
 
 struct GameObject_Player* player_new(int x, int y, char character, float speed);
@@ -43,5 +49,14 @@ int player_is_alive(struct GameObject_Player *player);
 void player_set_color(struct GameObject_Player *player, Color fg, Color bg);
 Color player_get_fg(struct GameObject_Player *player);
 Color player_get_bg(struct GameObject_Player *player);
+
+void player_set_jump_power(struct GameObject_Player *player, float jump_power);
+float player_get_jump_power(struct GameObject_Player *player);
+void player_set_gravity(struct GameObject_Player *player, float gravity);
+float player_get_gravity(struct GameObject_Player *player);
+void player_enable_gravity(struct GameObject_Player *player, float gravity);
+void player_disable_gravity(struct GameObject_Player *player);
+void player_jump(struct GameObject_Player *player);
+int player_is_grounded(struct GameObject_Player *player);
 
 #endif

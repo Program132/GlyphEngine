@@ -28,6 +28,12 @@ void player_build(struct GameObject_Player *player, int x, int y, char character
     player->max_health = 100;
     player->fg = COLOR_DEFAULT;
     player->bg = COLOR_DEFAULT;
+    player->vx = 0.0f;
+    player->vy = 0.0f;
+    player->jump_power = 18.0f;
+    player->gravity = 45.0f;
+    player->use_gravity = 0;
+    player->is_grounded = 0;
 }
 
 void player_free(struct GameObject_Player *player) {
@@ -134,4 +140,49 @@ Color player_get_fg(struct GameObject_Player *player) {
 Color player_get_bg(struct GameObject_Player *player) {
     if (player == NULL) return COLOR_DEFAULT;
     return player->bg;
+}
+
+void player_set_jump_power(struct GameObject_Player *player, float jump_power) {
+    if (player == NULL) return;
+    player->jump_power = jump_power;
+}
+
+float player_get_jump_power(struct GameObject_Player *player) {
+    if (player == NULL) return 0.0f;
+    return player->jump_power;
+}
+
+void player_set_gravity(struct GameObject_Player *player, float gravity) {
+    if (player == NULL) return;
+    player->gravity = gravity;
+}
+
+float player_get_gravity(struct GameObject_Player *player) {
+    if (player == NULL) return 0.0f;
+    return player->gravity;
+}
+
+void player_enable_gravity(struct GameObject_Player *player, float gravity) {
+    if (player == NULL) return;
+    player->use_gravity = 1;
+    player->gravity = gravity;
+}
+
+void player_disable_gravity(struct GameObject_Player *player) {
+    if (player == NULL) return;
+    player->use_gravity = 0;
+    player->vy = 0.0f;
+}
+
+void player_jump(struct GameObject_Player *player) {
+    if (player == NULL) return;
+    if (player->is_grounded) {
+        player->vy = -player->jump_power;
+        player->is_grounded = 0;
+    }
+}
+
+int player_is_grounded(struct GameObject_Player *player) {
+    if (player == NULL) return 0;
+    return player->is_grounded;
 }
