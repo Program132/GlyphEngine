@@ -1,12 +1,13 @@
 # Struct
 
-| Argument  | Type           | Description                                                        |
-|-----------|----------------|--------------------------------------------------------------------|
-| position  | struct Vector2 | Position (top-left corner) of the rectangle in 2D space            |
-| width     | int            | Width of the rectangle                                             |
-| height    | int            | Height of the rectangle                                            |
-| character | char           | Character used to render the rectangle                             |
-| filled    | int            | If 1, the rectangle is filled. If 0, only the outline is rendered. |
+| Argument  | Type            | Description                                                                     |
+|-----------|-----------------|---------------------------------------------------------------------------------|
+| position  | struct Vector2  | Position (top-left corner) of the rectangle in 2D space.                         |
+| width     | int             | Width of the rectangle.                                                         |
+| height    | int             | Height of the rectangle.                                                        |
+| character | char            | Character used to render the rectangle when untextured.                         |
+| filled    | int             | If 1, the rectangle is filled. If 0, only the outline is rendered.               |
+| texture   | struct Texture* | Optional ASCII texture pattern repeated across the rectangle's dimensions.      |
 
 # Functions
 
@@ -25,4 +26,6 @@
 | rectangle_set_character  | void                          | struct GameObject_Rectangle *rectangle, char newCharacter                                     | Sets the display character of the rectangle.                                                |
 | rectangle_enable_filled  | void                          | struct GameObject_Rectangle *rectangle                                                        | Enables filled mode (`filled` = 1).                                                         |
 | rectangle_disable_filled | void                          | struct GameObject_Rectangle *rectangle                                                        | Disables filled mode (`filled` = 0).                                                        |
+| rectangle_set_texture    | void                          | struct GameObject_Rectangle *rectangle, struct Texture *texture                               | Assigns an ASCII pattern texture to the rectangle.                                          |
+| rectangle_get_texture    | struct Texture*               | struct GameObject_Rectangle *rectangle                                                        | Returns the assigned texture (or `NULL`).                                                   |
 | rectangle_get_points     | struct GameObject_Point*      | struct GameObject_Rectangle *rectangle                                                        | Allocates and returns an array of all `GameObject_Point` covering the rectangle.            |
