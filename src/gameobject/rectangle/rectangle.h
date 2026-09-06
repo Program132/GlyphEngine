@@ -2,6 +2,7 @@
 #define RECTANGLE_H
 
 #include "../point/point.h"
+#include "../../texture/texture.h"
 
 struct GameObject_Rectangle {
     struct Vector2 position;
@@ -9,6 +10,7 @@ struct GameObject_Rectangle {
     int height;
     char character;
     int filled;
+    struct Texture *texture;
 };
 
 struct GameObject_Rectangle* rectangle_new(int x, int y, int width, int height, char character);
@@ -24,6 +26,8 @@ char rectangle_get_character(struct GameObject_Rectangle *rectangle);
 void rectangle_set_character(struct GameObject_Rectangle *rectangle, char newCharacter);
 void rectangle_enable_filled(struct GameObject_Rectangle *rectangle);
 void rectangle_disable_filled(struct GameObject_Rectangle *rectangle);
+void rectangle_set_texture(struct GameObject_Rectangle *rectangle, struct Texture *texture);
+struct Texture* rectangle_get_texture(struct GameObject_Rectangle *rectangle);
 struct GameObject_Point* rectangle_get_points(struct GameObject_Rectangle *rectangle);
 
 #endif
