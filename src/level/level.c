@@ -80,13 +80,23 @@ void level_build(struct Level *level, char* levelName, int sizeX, int sizeY, cha
         level->projectiles[i] = NULL;
     }
     level->particle_system = particle_system_new();
+    level->is_camera_enabled = 0;
+    level->viewport_w = sizeX;
+    level->viewport_h = sizeY;
+    level->cam_x = 0.0f;
+    level->cam_y = 0.0f;
 }
 
 void level_display(struct Level *level) {
     clearConsoleScreen();
     
+    int render_w = level->is_camera_enabled ? level->viewport_w : level->sizeX;
+    int render_h = level->is_camera_enabled ? level->viewport_h : level->sizeY;
+    int cam_offset_x = level->is_camera_enabled ? (int)level->cam_x : 0;
+    int cam_offset_y = level->is_camera_enabled ? (int)level->cam_y : 0;
+
     int max_cell_size = 24;
-    int buffer_size = (level->sizeY + MAX_HUD_LINES * 2 + 4) * (level->sizeX * max_cell_size + 64) + 1024;
+    int buffer_size = (render_h + MAX_HUD_LINES * 2 + 4) * (render_w * max_cell_size + 64) + 1024;
     char *buffer = malloc(buffer_size);
     if (buffer == NULL) return;
     int buf_idx = 0;
@@ -129,7 +139,7 @@ void level_display(struct Level *level) {
             while (*bg_ansi) buffer[buf_idx++] = *bg_ansi++;
             current_bg = level->hud_top_sep_bg;
         }
-        for (int x = 0; x < level->sizeX; x++) {
+        for (int x = 0; x < render_w; x++) {
             buffer[buf_idx++] = level->hud_top_separator;
         }
         if (current_fg != COLOR_DEFAULT || current_bg != COLOR_DEFAULT) {
@@ -141,11 +151,13 @@ void level_display(struct Level *level) {
         buffer[buf_idx++] = '\n';
     }
 
-    for (int y = 0; y < level->sizeY; y++) {
-        for (int x = 0; x < level->sizeX; x++) {
-            char toPrint = level->defaultCharacter;
-            Color cell_fg = level->default_fg;
-            Color cell_bg = level->default_bg;
+    for (int vy = 0; vy < render_h; vy++) {
+        int y = vy + cam_offset_y;
+        for (int vx = 0; vx < render_w; vx++) {
+            int x = vx + cam_offset_x;
+            char toPrint = (x >= 0 && x < level->sizeX && y >= 0 && y < level->sizeY) ? level->defaultCharacter : ' ';
+            Color cell_fg = (x >= 0 && x < level->sizeX && y >= 0 && y < level->sizeY) ? level->default_fg : COLOR_DEFAULT;
+            Color cell_bg = (x >= 0 && x < level->sizeX && y >= 0 && y < level->sizeY) ? level->default_bg : COLOR_DEFAULT;
             
             for (int i = 0; i < MAX_ARRAY_ELEMENTS; i++) {
                 struct GameObject_Ellipse *ell = level->ellipses[i];
@@ -313,7 +325,7 @@ void level_display(struct Level *level) {
             while (*bg_ansi) buffer[buf_idx++] = *bg_ansi++;
             current_bg = level->hud_bottom_sep_bg;
         }
-        for (int x = 0; x < level->sizeX; x++) {
+        for (int x = 0; x < render_w; x++) {
             buffer[buf_idx++] = level->hud_bottom_separator;
         }
         if (current_fg != COLOR_DEFAULT || current_bg != COLOR_DEFAULT) {
@@ -664,6 +676,24 @@ Color level_get_default_bg(struct Level *level) {
     return level->default_bg;
 }
 
+void level_set_camera(struct Level *level, float cam_x, float cam_y) {
+    if (level == NULL) return;
+    level->cam_x = cam_x;
+    level->cam_y = cam_y;
+}
+
+void level_enable_camera(struct Level *level, int viewport_w, int viewport_h) {
+    if (level == NULL) return;
+    level->is_camera_enabled = 1;
+    level->viewport_w = viewport_w;
+    level->viewport_h = viewport_h;
+}
+
+void level_disable_camera(struct Level *level) {
+    if (level == NULL) return;
+    level->is_camera_enabled = 0;
+}
+
 void level_free(struct Level *level) {
     if (level == NULL) return;
     
@@ -712,13 +742,11 @@ void level_free(struct Level *level) {
         free(level->texts);
     }
 
-    if (level->projectiles != NULL) {
-        for (int i = 0; i < MAX_LEVEL_PROJECTILES; i++) {
-            if (level->projectiles[i] != NULL) {
-                projectile_free(level->projectiles[i]);
-            }
+    for (int i = 0; i < MAX_LEVEL_PROJECTILES; i++) {
+        if (level->projectiles[i] != NULL) {
+            projectile_free(level->projectiles[i]);
+            level->projectiles[i] = NULL;
         }
-        free(level->projectiles);
     }
 
     if (level->particle_system != NULL) {

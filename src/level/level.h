@@ -49,6 +49,11 @@ struct Level {
     char hud_bottom_separator;
     Color hud_bottom_sep_fg;
     Color hud_bottom_sep_bg;
+    int is_camera_enabled;
+    int viewport_w;
+    int viewport_h;
+    float cam_x;
+    float cam_y;
 };
 
 struct Level* level_new(char* levelName, int sizeX, int sizeY, char defaultCharacter);
@@ -87,6 +92,9 @@ void level_set_defaultCharacter(struct Level *level, char defaultCharacter);
 void level_set_default_color(struct Level *level, Color fg, Color bg);
 Color level_get_default_fg(struct Level *level);
 Color level_get_default_bg(struct Level *level);
+void level_set_camera(struct Level *level, float cam_x, float cam_y);
+void level_enable_camera(struct Level *level, int viewport_w, int viewport_h);
+void level_disable_camera(struct Level *level);
 void level_free(struct Level *level);
 
 #endif
