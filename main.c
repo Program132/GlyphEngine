@@ -7,10 +7,12 @@
 #include "src/gameobject/player/player.h"
 #include "src/gameobject/rectangle/rectangle.h"
 #include "src/gameobject/circle/circle.h"
-#include "src/gameobject/point/point.h"
+#include "src/projectile/projectile.h"
+#include "src/particle/particle.h"
 #include "src/collision/collision.h"
 #include "src/color/color.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 enum GameState {
     STATE_MENU = 0,
@@ -23,28 +25,45 @@ struct LevelUI *g_menu = NULL;
 struct LevelUI *g_gameover_ui = NULL;
 struct Level *g_game = NULL;
 struct GameObject_Player *g_player = NULL;
-struct GameObject_Rectangle *g_lava = NULL;
-struct GameObject_Ellipse *g_orb1 = NULL;
-struct GameObject_Ellipse *g_orb2 = NULL;
-struct GameObject_Point *g_coin = NULL;
+struct GameObject_Rectangle *g_invader1 = NULL;
+struct GameObject_Rectangle *g_invader2 = NULL;
+struct GameObject_Ellipse *g_mothership = NULL;
 struct GameObject_Text *g_final_score = NULL;
 
 enum GameState g_state = STATE_MENU;
 int g_score = 0;
-float orb1_x = 20.0f, orb1_y = 4.0f, orb1_dx = 16.0f, orb1_dy = 9.0f;
-float orb2_x = 40.0f, orb2_y = 8.0f, orb2_dx = -12.0f, orb2_dy = -11.0f;
+int invader1_alive = 1;
+int invader2_alive = 1;
+int mothership_hp = 30;
+float invader1_x = 10.0f, invader1_dx = 12.0f;
+float invader2_x = 35.0f, invader2_dx = -15.0f;
+float mothership_x = 25.0f, mothership_dx = 8.0f;
+float enemy_shoot_timer = 0.0f;
 
 void reset_game(void) {
     g_score = 0;
     player_set_health(g_player, 100);
-    player_set_position(g_player, 10, 6);
-    g_player->exact_x = 10.0f;
-    g_player->exact_y = 6.0f;
-    player_set_color(g_player, COLOR_BRIGHT_YELLOW, COLOR_DEFAULT);
-    orb1_x = 20.0f; orb1_y = 4.0f; orb1_dx = 16.0f; orb1_dy = 9.0f;
-    orb2_x = 40.0f; orb2_y = 8.0f; orb2_dx = -12.0f; orb2_dy = -11.0f;
-    g_coin->position.x = 45;
-    g_coin->position.y = 5;
+    player_set_position(g_player, 30, 12);
+    g_player->exact_x = 30.0f;
+    g_player->exact_y = 12.0f;
+    player_set_color(g_player, COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
+    
+    invader1_alive = 1;
+    invader2_alive = 1;
+    mothership_hp = 30;
+    invader1_x = 10.0f; invader1_dx = 12.0f;
+    invader2_x = 35.0f; invader2_dx = -15.0f;
+    mothership_x = 25.0f; mothership_dx = 8.0f;
+    enemy_shoot_timer = 0.0f;
+
+    for (int i = 0; i < MAX_LEVEL_PROJECTILES; i++) {
+        if (g_game->projectiles[i] != NULL) {
+            g_game->projectiles[i]->is_alive = 0;
+        }
+    }
+    if (g_game->particle_system != NULL) {
+        particle_system_clear(g_game->particle_system);
+    }
 }
 
 void on_play_clicked(struct UIButton *btn, void *user_data) {
@@ -81,7 +100,9 @@ void on_quit_clicked(struct UIButton *btn, void *user_data) {
 
 void update(struct Engine *engine, float dt) {
     static int prev_esc = 0;
+    static int prev_space = 0;
     int esc = input_is_key_down(KEY_ESCAPE);
+    int space = input_is_key_down(KEY_SPACE);
 
     if (esc && !prev_esc) {
         if (g_state == STATE_GAME) {
@@ -119,45 +140,91 @@ void update(struct Engine *engine, float dt) {
     player_move(g_player, dx, dy, dt);
     collision_clamp_player(g_game, g_player);
 
-    orb1_x += orb1_dx * dt;
-    orb1_y += orb1_dy * dt;
-    if (orb1_x <= 2.0f || orb1_x >= g_game->sizeX - 6.0f) orb1_dx = -orb1_dx;
-    if (orb1_y <= 1.0f || orb1_y >= g_game->sizeY - 4.0f) orb1_dy = -orb1_dy;
-    g_orb1->position.x = (int)orb1_x;
-    g_orb1->position.y = (int)orb1_y;
-
-    orb2_x += orb2_dx * dt;
-    orb2_y += orb2_dy * dt;
-    if (orb2_x <= 2.0f || orb2_x >= g_game->sizeX - 6.0f) orb2_dx = -orb2_dx;
-    if (orb2_y <= 1.0f || orb2_y >= g_game->sizeY - 4.0f) orb2_dy = -orb2_dy;
-    g_orb2->position.x = (int)orb2_x;
-    g_orb2->position.y = (int)orb2_y;
-
-    int took_damage = 0;
-    if (collision_check_player_ellipse(g_player, g_orb1)) {
-        player_take_damage(g_player, 2);
-        took_damage = 1;
+    if (space && !prev_space) {
+        level_spawn_projectile(g_game, g_player->exact_x, g_player->exact_y - 1.0f, 0.0f, -24.0f, '|', COLOR_BRIGHT_YELLOW, 10, 1.5f, PROJECTILE_PLAYER);
+        level_spawn_particles_sparkle(g_game, g_player->exact_x, g_player->exact_y, 4, COLOR_YELLOW);
     }
-    if (collision_check_player_ellipse(g_player, g_orb2)) {
-        player_take_damage(g_player, 2);
-        took_damage = 1;
-    }
-    if (collision_check_player_rect(g_player, g_lava)) {
-        player_take_damage(g_player, 3);
-        took_damage = 1;
-    }
+    prev_space = space;
 
-    if (took_damage) {
-        player_set_color(g_player, COLOR_BRIGHT_RED, COLOR_DEFAULT);
+    if (invader1_alive) {
+        invader1_x += invader1_dx * dt;
+        if (invader1_x <= 2.0f || invader1_x >= g_game->sizeX - 10.0f) invader1_dx = -invader1_dx;
+        g_invader1->position.x = (int)invader1_x;
     } else {
-        player_set_color(g_player, COLOR_BRIGHT_YELLOW, COLOR_DEFAULT);
+        g_invader1->position.x = -100;
     }
 
-    if (g_coin != NULL && collision_check_player_point(g_player, g_coin)) {
-        g_score += 100;
-        player_heal(g_player, 15);
-        g_coin->position.x = 6 + (g_coin->position.x * 7) % 48;
-        g_coin->position.y = 2 + (g_coin->position.y * 3) % 8;
+    if (invader2_alive) {
+        invader2_x += invader2_dx * dt;
+        if (invader2_x <= 2.0f || invader2_x >= g_game->sizeX - 10.0f) invader2_dx = -invader2_dx;
+        g_invader2->position.x = (int)invader2_x;
+    } else {
+        g_invader2->position.x = -100;
+    }
+
+    if (mothership_hp > 0) {
+        mothership_x += mothership_dx * dt;
+        if (mothership_x <= 6.0f || mothership_x >= g_game->sizeX - 8.0f) mothership_dx = -mothership_dx;
+        g_mothership->position.x = (int)mothership_x;
+    } else {
+        g_mothership->position.x = -100;
+    }
+
+    enemy_shoot_timer += dt;
+    if (enemy_shoot_timer >= 1.2f) {
+        enemy_shoot_timer = 0.0f;
+        if (mothership_hp > 0) {
+            level_spawn_projectile(g_game, mothership_x, 3.0f, 0.0f, 10.0f, 'v', COLOR_BRIGHT_RED, 15, 2.5f, PROJECTILE_ENEMY);
+        }
+        if (invader1_alive && (rand() % 2 == 0)) {
+            level_spawn_projectile(g_game, invader1_x + 3.0f, 6.0f, 0.0f, 12.0f, '*', COLOR_BRIGHT_MAGENTA, 10, 2.0f, PROJECTILE_ENEMY);
+        }
+        if (invader2_alive && (rand() % 2 == 0)) {
+            level_spawn_projectile(g_game, invader2_x + 3.0f, 6.0f, 0.0f, 12.0f, '*', COLOR_BRIGHT_MAGENTA, 10, 2.0f, PROJECTILE_ENEMY);
+        }
+    }
+
+    level_update(g_game, dt);
+
+    for (int i = 0; i < MAX_LEVEL_PROJECTILES; i++) {
+        struct GameObject_Projectile *p = g_game->projectiles[i];
+        if (p == NULL || !p->is_alive) continue;
+
+        if (p->owner == PROJECTILE_PLAYER) {
+            if (invader1_alive && collision_check_projectile_rect(p, g_invader1)) {
+                p->is_alive = 0;
+                invader1_alive = 0;
+                g_score += 150;
+                level_spawn_particles_explosion(g_game, p->exact_x, p->exact_y, 16, COLOR_BRIGHT_RED);
+            } else if (invader2_alive && collision_check_projectile_rect(p, g_invader2)) {
+                p->is_alive = 0;
+                invader2_alive = 0;
+                g_score += 150;
+                level_spawn_particles_explosion(g_game, p->exact_x, p->exact_y, 16, COLOR_BRIGHT_RED);
+            } else if (mothership_hp > 0 && collision_check_projectile_ellipse(p, g_mothership)) {
+                p->is_alive = 0;
+                mothership_hp -= p->damage;
+                g_score += 50;
+                level_spawn_particles_sparkle(g_game, p->exact_x, p->exact_y, 8, COLOR_BRIGHT_YELLOW);
+                if (mothership_hp <= 0) {
+                    g_score += 500;
+                    level_spawn_particles_explosion(g_game, mothership_x, 2.0f, 25, COLOR_BRIGHT_YELLOW);
+                }
+            }
+        } else if (p->owner == PROJECTILE_ENEMY) {
+            if (collision_check_projectile_player(p, g_player)) {
+                p->is_alive = 0;
+                player_take_damage(g_player, p->damage);
+                player_set_color(g_player, COLOR_BRIGHT_RED, COLOR_DEFAULT);
+                level_spawn_particles_sparkle(g_game, g_player->exact_x, g_player->exact_y, 10, COLOR_RED);
+            }
+        }
+    }
+
+    if (invader1_alive == 0 && invader2_alive == 0 && mothership_hp <= 0) {
+        invader1_alive = 1;
+        invader2_alive = 1;
+        mothership_hp = 40;
     }
 
     int hp = player_get_health(g_player);
@@ -173,7 +240,7 @@ void update(struct Engine *engine, float dt) {
     }
 
     char top_buf[80];
-    snprintf(top_buf, sizeof(top_buf), " HP: %3d/100   |   SCORE: %5d   |   DODGE THE RED ORBS! ", hp, g_score);
+    snprintf(top_buf, sizeof(top_buf), " HP: %3d/100  |  SCORE: %5d  |  BOSS HP: %2d  |  [SPACE] Shoot ", hp, g_score, mothership_hp > 0 ? mothership_hp : 0);
     Color hud_color = (hp > 50) ? COLOR_BRIGHT_GREEN : (hp > 20 ? COLOR_BRIGHT_YELLOW : COLOR_BRIGHT_RED);
     level_set_hud_text(g_game, HUD_TOP, 0, top_buf, hud_color, COLOR_BLACK);
 }
@@ -185,7 +252,7 @@ int main() {
     struct UIPanel *box = panel_new_styled(14, 2, 32, 16, " GLYPH ENGINE ", '#', ' ', COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
     level_ui_add_panel(g_menu, box);
 
-    struct GameObject_Text *sub = text_new_colored(19, 4, "Terminal GUI & Menu", COLOR_YELLOW, COLOR_DEFAULT);
+    struct GameObject_Text *sub = text_new_colored(18, 4, "Projectiles & Particles", COLOR_YELLOW, COLOR_DEFAULT);
     level_ui_add_text(g_menu, sub);
 
     struct UIButton *btn_play = button_new(20, 7, 20, 3, "START GAME");
@@ -227,32 +294,28 @@ int main() {
     level_set_default_color(g_game, COLOR_BRIGHT_BLACK, COLOR_DEFAULT);
 
     level_set_hud_separator(g_game, HUD_TOP, '=', COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
-    level_set_hud_text(g_game, HUD_TOP, 0, " HP: 100/100   |   SCORE:     0   |   DODGE THE RED ORBS! ", COLOR_BRIGHT_GREEN, COLOR_BLACK);
+    level_set_hud_text(g_game, HUD_TOP, 0, " HP: 100/100  |  SCORE:     0  |  BOSS HP: 30  |  [SPACE] Shoot ", COLOR_BRIGHT_GREEN, COLOR_BLACK);
 
     level_set_hud_separator(g_game, HUD_BOTTOM, '=', COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
-    level_set_hud_text(g_game, HUD_BOTTOM, 0, " [ZQSD / Arrows] Move   |   [ESC] Return to Menu ", COLOR_WHITE, COLOR_BLUE);
+    level_set_hud_text(g_game, HUD_BOTTOM, 0, " [ZQSD / Arrows] Move  |  [SPACE] Shoot  |  [ESC] Menu ", COLOR_WHITE, COLOR_BLUE);
 
-    g_lava = rectangle_new(20, 10, 20, 3, '~');
-    rectangle_enable_filled(g_lava);
-    rectangle_set_color(g_lava, COLOR_BRIGHT_RED, COLOR_RED);
-    level_add_rectangle(g_game, g_lava);
+    g_mothership = circle_new((int)mothership_x, 2, 4, 'W');
+    ellipse_enable_filled(g_mothership);
+    ellipse_set_color(g_mothership, COLOR_BRIGHT_MAGENTA, COLOR_DEFAULT);
+    level_add_ellipse(g_game, g_mothership);
 
-    g_orb1 = circle_new((int)orb1_x, (int)orb1_y, 4, 'O');
-    ellipse_enable_filled(g_orb1);
-    ellipse_set_color(g_orb1, COLOR_BRIGHT_RED, COLOR_DEFAULT);
-    level_add_ellipse(g_game, g_orb1);
+    g_invader1 = rectangle_new((int)invader1_x, 5, 8, 2, 'M');
+    rectangle_enable_filled(g_invader1);
+    rectangle_set_color(g_invader1, COLOR_BRIGHT_RED, COLOR_DEFAULT);
+    level_add_rectangle(g_game, g_invader1);
 
-    g_orb2 = circle_new((int)orb2_x, (int)orb2_y, 5, 'X');
-    ellipse_enable_filled(g_orb2);
-    ellipse_set_color(g_orb2, COLOR_BRIGHT_MAGENTA, COLOR_DEFAULT);
-    level_add_ellipse(g_game, g_orb2);
+    g_invader2 = rectangle_new((int)invader2_x, 5, 8, 2, 'M');
+    rectangle_enable_filled(g_invader2);
+    rectangle_set_color(g_invader2, COLOR_BRIGHT_RED, COLOR_DEFAULT);
+    level_add_rectangle(g_game, g_invader2);
 
-    g_coin = point_new(45, 5, '$');
-    point_set_color(g_coin, COLOR_BRIGHT_YELLOW, COLOR_DEFAULT);
-    level_add_point(g_game, g_coin);
-
-    g_player = player_new(10, 6, '@', 16.0f);
-    player_set_color(g_player, COLOR_BRIGHT_YELLOW, COLOR_DEFAULT);
+    g_player = player_new(30, 12, '^', 18.0f);
+    player_set_color(g_player, COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
     level_add_player(g_game, g_player);
 
     g_engine = engine_new(NULL, 60, 20);
