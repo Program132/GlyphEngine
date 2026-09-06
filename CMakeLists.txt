@@ -31,6 +31,12 @@ add_executable(GlyphEngine
         src/gameobject/player/player.c
         src/gameobject/text/text.h
         src/gameobject/text/text.c
+        src/ui/button/button.h
+        src/ui/button/button.c
+        src/ui/panel/panel.h
+        src/ui/panel/panel.c
+        src/levelui/levelui.h
+        src/levelui/levelui.c
         src/engine/engine.h
         src/engine/engine.c
         src/inputs/inputs.h
