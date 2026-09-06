@@ -11,6 +11,8 @@ Minimalist 2D text-based game engine for the terminal (C99).
 - Real-time keyboard input polling (non-blocking)
 - 2D ASCII Texturing system with transparency support
 - In-game Text & HUD labels (`GameObject_Text`) with custom positioning and colors
+- Off-canvas HUD system (`HUD_TOP`, `HUD_BOTTOM`) with full-width separators outside the game grid
+- Dedicated `LevelUI` scene system with interactive buttons (`UIButton`), styled panels (`UIPanel`), and keyboard navigation
 - Dedicated `GameObject_Player` with sub-pixel delta movement and health
 - 2D geometric shapes (Point, Rectangle, Square, Ellipse, Circle)
 - Cascading memory management (`engine_free`)
@@ -95,7 +97,8 @@ Detailed documentation for each module is located in the [doc/](doc/) directory:
 
 - **Engine & Scenes**
   - [Engine](doc/engine.md) — Main loop, framerate, and callbacks.
-  - [Level](doc/level.md) — Object container, grid, and rendering.
+  - [Level](doc/level.md) — Object container, grid, rendering, and off-canvas HUD.
+  - [LevelUI](doc/levelui.md) — GUI scenes, buttons, styled panels, and keyboard navigation.
 - **Physics & Styling**
   - [Collision](doc/collision.md) — 2D intersection routines, boundary checks, and clamping.
   - [Color](doc/color.md) — ANSI 16-color enumeration and styling helpers.
@@ -104,7 +107,7 @@ Detailed documentation for each module is located in the [doc/](doc/) directory:
   - [Utils](doc/utils.md) — Screen clearing and cursor control.
 - **Texturing & Graphics**
   - [Texture](doc/texture.md) — Multi-character ASCII art patterns and transparency.
-- **Game Objects**
+- **Game Objects & UI Components**
   - [Player](doc/GameObject_Player.md) — Dedicated player entity with sub-pixel movement, health, and colors.
   - [Text](doc/GameObject_Text.md) — Screen text and HUD labels with custom position and ANSI colors.
   - [Point](doc/GameObject_Points.md) — Single character point.
@@ -125,3 +128,4 @@ Example programs are available in the `examples/` directory:
 - `examples/05_dungeon_crawler.c`: Dungeon crawler with textured walls, player health, and items.
 - `examples/06_textured_shapes.c`: Textured circle, ellipse, and square shapes.
 - `examples/07_collisions_and_colors.c`: Colored level, colored obstacles, and real-time collision detection.
+- `examples/08_level_ui_menu.c`: Interactive GUI menu with buttons, panels, keyboard navigation, and level transition.
