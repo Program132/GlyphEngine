@@ -145,4 +145,4 @@ int input_is_key_down(KeyCode key);
 
 void input_flush(void);
 
-#endif // INPUTS_H
+#endif
