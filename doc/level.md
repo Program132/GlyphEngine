@@ -6,6 +6,7 @@
 | points           | struct GameObject_Point**     | Dynamic array of pointers to points                 |
 | rectangles       | struct GameObject_Rectangle** | Dynamic array of pointers to rectangles             |
 | ellipses         | struct GameObject_Ellipse**   | Dynamic array of pointers to ellipses               |
+| players          | struct GameObject_Player**    | Dynamic array of pointers to players                |
 | sizeX            | int                           | Level width (number of columns)                     |
 | sizeY            | int                           | Level height (number of rows)                       |
 | defaultCharacter | char                          | Default character used for empty/background cells   |
@@ -32,6 +33,9 @@
 | level_add_ellipse          | void                         | struct Level *level, struct GameObject_Ellipse *ellipse                                 | Adds an ellipse to the level (the level assumes ownership of the memory)                   |
 | level_remove_ellipse       | void                         | struct Level *level, struct GameObject_Ellipse *ellipse                                 | Removes the specified ellipse from the level                                              |
 | level_get_ellipse          | struct GameObject_Ellipse*   | struct Level *level, struct Vector2 position                                            | Returns a pointer to the ellipse covering the given position (or NULL)                    |
+| level_add_player           | void                         | struct Level *level, struct GameObject_Player *player                                   | Adds a player entity to the level (the level assumes ownership of the player)            |
+| level_remove_player        | void                         | struct Level *level, struct GameObject_Player *player                                   | Removes the specified player entity from the level                                        |
+| level_get_player           | struct GameObject_Player*    | struct Level *level, struct Vector2 position                                            | Returns a pointer to the player at or covering the given position (or NULL)               |
 | level_get_name             | char*                        | struct Level *level                                                                     | Returns the name of the level                                                             |
 | level_get_sizeX            | int                          | struct Level *level                                                                     | Returns the width (sizeX) of the level                                                    |
 | level_get_sizeY            | int                          | struct Level *level                                                                     | Returns the height (sizeY) of the level                                                   |
@@ -43,4 +47,4 @@
 | level_free                 | void                         | struct Level *level                                                                     | Frees the level, its internal arrays, and all contained game objects (`*_free`)          |
 
 ## Memory Management
-When objects (`GameObject_Point`, `GameObject_Rectangle`, `GameObject_Ellipse`) are added via `level_add_*`, the `Level` assumes ownership of their memory. Calling `level_free(level)` automatically calls the respective cleanup function on every contained object before freeing the level's arrays and structure.
+When objects (`GameObject_Point`, `GameObject_Rectangle`, `GameObject_Ellipse`, `GameObject_Player`) are added via `level_add_*`, the `Level` assumes ownership of their memory. Calling `level_free(level)` automatically calls the respective cleanup function on every contained object before freeing the level's arrays and structure.
