@@ -6,9 +6,12 @@
 #include "../gameobject/ellipse/ellipse.h"
 #include "../gameobject/player/player.h"
 #include "../gameobject/text/text.h"
+#include "../projectile/projectile.h"
+#include "../particle/particle.h"
 #include "../color/color.h"
 
 #define MAX_ARRAY_ELEMENTS 500
+#define MAX_LEVEL_PROJECTILES 128
 
 typedef enum {
     HUD_TOP = 0,
@@ -31,6 +34,8 @@ struct Level {
     struct GameObject_Ellipse **ellipses;
     struct GameObject_Player **players;
     struct GameObject_Text **texts;
+    struct GameObject_Projectile *projectiles[MAX_LEVEL_PROJECTILES];
+    struct ParticleSystem *particle_system;
     int sizeX;
     int sizeY;
     char defaultCharacter;
@@ -66,6 +71,11 @@ void level_remove_text(struct Level *level, struct GameObject_Text *text);
 void level_set_hud_text(struct Level *level, HudPosition pos, int line_index, const char *text, Color fg, Color bg);
 void level_clear_hud(struct Level *level, HudPosition pos);
 void level_set_hud_separator(struct Level *level, HudPosition pos, char separator_char, Color fg, Color bg);
+
+void level_spawn_projectile(struct Level *level, float x, float y, float vx, float vy, char character, Color fg, int damage, float lifetime, ProjectileOwner owner);
+void level_spawn_particles_explosion(struct Level *level, float x, float y, int count, Color fg);
+void level_spawn_particles_sparkle(struct Level *level, float x, float y, int count, Color fg);
+void level_update(struct Level *level, float dt);
 char* level_get_name(struct Level *level);
 int level_get_sizeX(struct Level *level);
 int level_get_sizeY(struct Level *level);

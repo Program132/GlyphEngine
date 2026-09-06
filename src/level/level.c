@@ -75,6 +75,11 @@ void level_build(struct Level *level, char* levelName, int sizeX, int sizeY, cha
     level->hud_bottom_separator = '\0';
     level->hud_bottom_sep_fg = COLOR_DEFAULT;
     level->hud_bottom_sep_bg = COLOR_DEFAULT;
+
+    for (int i = 0; i < MAX_LEVEL_PROJECTILES; i++) {
+        level->projectiles[i] = NULL;
+    }
+    level->particle_system = particle_system_new();
 }
 
 void level_display(struct Level *level) {
@@ -238,6 +243,26 @@ void level_display(struct Level *level) {
                             cell_fg = pl->fg;
                             cell_bg = pl->bg;
                         }
+                    }
+                }
+            }
+
+            for (int p = 0; p < MAX_LEVEL_PROJECTILES; p++) {
+                struct GameObject_Projectile *proj = level->projectiles[p];
+                if (proj != NULL && proj->is_alive && proj->position.x == x && proj->position.y == y) {
+                    toPrint = proj->character;
+                    cell_fg = proj->fg;
+                    cell_bg = proj->bg;
+                }
+            }
+
+            if (level->particle_system != NULL) {
+                for (int pt = 0; pt < MAX_PARTICLES; pt++) {
+                    struct Particle *part = &level->particle_system->particles[pt];
+                    if (part->is_alive && part->x == x && part->y == y) {
+                        toPrint = part->character;
+                        cell_fg = part->fg;
+                        cell_bg = part->bg;
                     }
                 }
             }
@@ -543,6 +568,54 @@ void level_set_hud_separator(struct Level *level, HudPosition pos, char separato
     }
 }
 
+void level_spawn_projectile(struct Level *level, float x, float y, float vx, float vy, char character, Color fg, int damage, float lifetime, ProjectileOwner owner) {
+    if (level == NULL) return;
+    int slot = -1;
+    for (int i = 0; i < MAX_LEVEL_PROJECTILES; i++) {
+        if (level->projectiles[i] == NULL) {
+            slot = i;
+            break;
+        } else if (!level->projectiles[i]->is_alive) {
+            slot = i;
+            break;
+        }
+    }
+    if (slot == -1) return;
+
+    if (level->projectiles[slot] == NULL) {
+        level->projectiles[slot] = projectile_new(x, y, vx, vy, character, fg, COLOR_DEFAULT, damage, lifetime, owner);
+    } else {
+        projectile_build(level->projectiles[slot], x, y, vx, vy, character, fg, COLOR_DEFAULT, damage, lifetime, owner);
+    }
+}
+
+void level_spawn_particles_explosion(struct Level *level, float x, float y, int count, Color fg) {
+    if (level == NULL || level->particle_system == NULL) return;
+    particle_system_burst_explosion(level->particle_system, x, y, count, fg);
+}
+
+void level_spawn_particles_sparkle(struct Level *level, float x, float y, int count, Color fg) {
+    if (level == NULL || level->particle_system == NULL) return;
+    particle_system_burst_sparkle(level->particle_system, x, y, count, fg);
+}
+
+void level_update(struct Level *level, float dt) {
+    if (level == NULL) return;
+    for (int i = 0; i < MAX_LEVEL_PROJECTILES; i++) {
+        struct GameObject_Projectile *p = level->projectiles[i];
+        if (p != NULL && p->is_alive) {
+            projectile_update(p, dt);
+            if (p->position.x < 0 || p->position.x >= level->sizeX ||
+                p->position.y < 0 || p->position.y >= level->sizeY) {
+                p->is_alive = 0;
+            }
+        }
+    }
+    if (level->particle_system != NULL) {
+        particle_system_update(level->particle_system, dt);
+    }
+}
+
 char* level_get_name(struct Level *level) {
     return level->name;
 }
@@ -637,6 +710,19 @@ void level_free(struct Level *level) {
             }
         }
         free(level->texts);
+    }
+
+    if (level->projectiles != NULL) {
+        for (int i = 0; i < MAX_LEVEL_PROJECTILES; i++) {
+            if (level->projectiles[i] != NULL) {
+                projectile_free(level->projectiles[i]);
+            }
+        }
+        free(level->projectiles);
+    }
+
+    if (level->particle_system != NULL) {
+        particle_system_free(level->particle_system);
     }
     
     free(level);

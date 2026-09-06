@@ -116,6 +116,34 @@ int collision_check_player_player(struct GameObject_Player *p1, struct GameObjec
     return collision_check_rect_rect(&r1, &r2);
 }
 
+int collision_check_projectile_rect(struct GameObject_Projectile *proj, struct GameObject_Rectangle *rect) {
+    if (proj == NULL || !proj->is_alive || rect == NULL) return 0;
+    return collision_check_point_rect(proj->position, rect);
+}
+
+int collision_check_projectile_ellipse(struct GameObject_Projectile *proj, struct GameObject_Ellipse *ellipse) {
+    if (proj == NULL || !proj->is_alive || ellipse == NULL) return 0;
+    return collision_check_point_ellipse(proj->position, ellipse);
+}
+
+int collision_check_projectile_player(struct GameObject_Projectile *proj, struct GameObject_Player *player) {
+    if (proj == NULL || !proj->is_alive || player == NULL) return 0;
+    int pw = (player->texture != NULL) ? player->texture->width : 1;
+    int ph = (player->texture != NULL) ? player->texture->height : 1;
+    if (proj->position.x >= player->position.x &&
+        proj->position.x < player->position.x + pw &&
+        proj->position.y >= player->position.y &&
+        proj->position.y < player->position.y + ph) {
+        if (player->texture != NULL) {
+            int px = proj->position.x - player->position.x;
+            int py = proj->position.y - player->position.y;
+            return texture_get_pixel(player->texture, px, py) != player->texture->transparent_char;
+        }
+        return 1;
+    }
+    return 0;
+}
+
 int collision_is_out_of_bounds(struct Level *level, int x, int y) {
     if (level == NULL) return 1;
     return (x < 0 || x >= level->sizeX || y < 0 || y >= level->sizeY);

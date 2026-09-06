@@ -21,6 +21,12 @@ int collision_check_player_ellipse(struct GameObject_Player *player, struct Game
 int collision_check_player_point(struct GameObject_Player *player, struct GameObject_Point *point);
 int collision_check_player_player(struct GameObject_Player *p1, struct GameObject_Player *p2);
 
+#include "../projectile/projectile.h"
+
+int collision_check_projectile_rect(struct GameObject_Projectile *proj, struct GameObject_Rectangle *rect);
+int collision_check_projectile_ellipse(struct GameObject_Projectile *proj, struct GameObject_Ellipse *ellipse);
+int collision_check_projectile_player(struct GameObject_Projectile *proj, struct GameObject_Player *player);
+
 int collision_is_out_of_bounds(struct Level *level, int x, int y);
 void collision_clamp_player(struct Level *level, struct GameObject_Player *player);
 
