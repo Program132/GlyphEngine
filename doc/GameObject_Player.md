@@ -16,6 +16,12 @@ The `GameObject_Player` structure represents an interactive player entity within
 | texture    | struct Texture* | Pointer to an optional multi-character ASCII sprite with transparency.          |
 | fg         | Color           | Foreground ANSI color.                                                          |
 | bg         | Color           | Background ANSI color.                                                          |
+| vx         | float           | Horizontal velocity component.                                                  |
+| vy         | float           | Vertical velocity component.                                                    |
+| jump_power | float           | Instantaneous vertical impulse applied when jumping.                            |
+| gravity    | float           | Downward gravitational acceleration in units/s².                                |
+| use_gravity| int             | Flag indicating if gravity simulation is enabled (default `0`).                 |
+| is_grounded| int             | Flag indicating whether player is resting on a solid surface.                   |
 
 # Functions
 
@@ -42,3 +48,11 @@ The `GameObject_Player` structure represents an interactive player entity within
 | player_set_color     | void                      | struct GameObject_Player *player, Color fg, Color bg                     | Sets the foreground and background ANSI colors for the player.                            |
 | player_get_fg        | Color                     | struct GameObject_Player *player                                         | Returns the foreground color.                                                             |
 | player_get_bg        | Color                     | struct GameObject_Player *player                                         | Returns the background color.                                                             |
+| player_set_jump_power| void                      | struct GameObject_Player *player, float jump_power                        | Configures the upward impulse for jumping.                                                |
+| player_get_jump_power| float                     | struct GameObject_Player *player                                         | Returns the player's current jump power.                                                  |
+| player_set_gravity   | void                      | struct GameObject_Player *player, float gravity                           | Sets the downward acceleration value.                                                     |
+| player_get_gravity   | float                     | struct GameObject_Player *player                                         | Returns the player's gravity setting.                                                     |
+| player_enable_gravity| void                      | struct GameObject_Player *player, float gravity                           | Enables gravity simulation on the player.                                                 |
+| player_disable_gravity| void                     | struct GameObject_Player *player                                         | Disables gravity simulation (restores pure top-down movement).                            |
+| player_jump          | void                      | struct GameObject_Player *player                                         | Triggers a jump if the player is grounded.                                                |
+| player_is_grounded   | int                       | struct GameObject_Player *player                                         | Returns `1` if the player is resting on a solid surface, `0` otherwise.                   |

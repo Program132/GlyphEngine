@@ -10,6 +10,7 @@
 | texture   | struct Texture* | Optional ASCII texture pattern repeated across the rectangle's dimensions.      |
 | fg        | Color           | Foreground ANSI color.                                                          |
 | bg        | Color           | Background ANSI color.                                                          |
+| is_solid  | int             | If 1, blocks physics bodies and players (default 1). If 0, pass-through.        |
 
 # Functions
 
@@ -34,4 +35,6 @@
 | rectangle_set_color      | void                          | struct GameObject_Rectangle *rectangle, Color fg, Color bg                                    | Sets the foreground and background ANSI colors for the rectangle.                           |
 | rectangle_get_fg         | Color                         | struct GameObject_Rectangle *rectangle                                                        | Returns the foreground color.                                                               |
 | rectangle_get_bg         | Color                         | struct GameObject_Rectangle *rectangle                                                        | Returns the background color.                                                               |
+| rectangle_set_solid      | void                          | struct GameObject_Rectangle *rectangle, int is_solid                                          | Configures solid collision blocking state (1 = solid platform, 0 = pass-through).           |
+| rectangle_is_solid       | int                           | struct GameObject_Rectangle *rectangle                                                        | Returns `1` if the rectangle is solid, `0` otherwise.                                       |
 | rectangle_get_points     | struct GameObject_Point*      | struct GameObject_Rectangle *rectangle                                                        | Allocates and returns an array of all `GameObject_Point` covering the rectangle.            |
