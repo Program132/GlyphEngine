@@ -13,6 +13,8 @@ Minimalist 2D text-based game engine for the terminal (C99).
 - In-game Text & HUD labels (`GameObject_Text`) with custom positioning and colors
 - Off-canvas HUD system (`HUD_TOP`, `HUD_BOTTOM`) with full-width separators outside the game grid
 - Dedicated `LevelUI` scene system with interactive buttons (`UIButton`), styled panels (`UIPanel`), and keyboard navigation
+- Projectile system (`GameObject_Projectile`) with sub-pixel float velocities, lifetime, damage, and collision checks
+- Particle system (`ParticleSystem`) with burst presets (explosions, sparkles), fading ANSI colors, and pool management
 - Dedicated `GameObject_Player` with sub-pixel delta movement and health
 - 2D geometric shapes (Point, Rectangle, Square, Ellipse, Circle)
 - Cascading memory management (`engine_free`)
@@ -102,6 +104,8 @@ Detailed documentation for each module is located in the [doc/](doc/) directory:
 - **Physics & Styling**
   - [Collision](doc/collision.md) — 2D intersection routines, boundary checks, and clamping.
   - [Color](doc/color.md) — ANSI 16-color enumeration and styling helpers.
+  - [Projectile](doc/projectile.md) — Projectile entities, trajectories, damage, and lifespan.
+  - [Particle](doc/particle.md) — Pool-based particle effects, ANSI color fades, and burst presets.
 - **Inputs & Utilities**
   - [Inputs](doc/inputs.md) — Real-time key state polling and keycodes.
   - [Utils](doc/utils.md) — Screen clearing and cursor control.
@@ -129,3 +133,4 @@ Example programs are available in the `examples/` directory:
 - `examples/06_textured_shapes.c`: Textured circle, ellipse, and square shapes.
 - `examples/07_collisions_and_colors.c`: Colored level, colored obstacles, and real-time collision detection.
 - `examples/08_level_ui_menu.c`: Interactive GUI menu with buttons, panels, keyboard navigation, and level transition.
+- `examples/09_projectiles_and_particles.c`: Real-time space shooter featuring lasers, enemy projectiles, and particle explosions.

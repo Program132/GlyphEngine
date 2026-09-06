@@ -8,6 +8,8 @@
 | ellipses         | struct GameObject_Ellipse**   | Dynamic array of pointers to ellipses               |
 | players          | struct GameObject_Player**    | Dynamic array of pointers to players                |
 | texts            | struct GameObject_Text**      | Dynamic array of pointers to text/HUD objects       |
+| projectiles      | struct GameObject_Projectile**| Dynamic array of pointers to active projectiles     |
+| particle_system  | struct ParticleSystem*        | Integrated particle pool system                     |
 | sizeX            | int                           | Level width (number of columns)                     |
 | sizeY            | int                           | Level height (number of rows)                       |
 | defaultCharacter | char                          | Default character used for empty/background cells   |
@@ -44,6 +46,10 @@
 | level_set_hud_text         | void                         | struct Level *level, HudPosition pos, int line_index, const char *text, Color fg, Color bg | Sets an off-canvas HUD text line above (HUD_TOP) or below (HUD_BOTTOM) the level grid.   |
 | level_clear_hud            | void                         | struct Level *level, HudPosition pos                                                     | Clears all off-canvas HUD lines at the specified position.                                |
 | level_set_hud_separator    | void                         | struct Level *level, HudPosition pos, char separator_char, Color fg, Color bg            | Sets a full-width separator line between the off-canvas HUD and the game level grid.      |
+| level_spawn_projectile     | void                         | struct Level *level, float x, float y, float vx, float vy, char character, Color fg, int damage, float lifetime, ProjectileOwner owner | Spawns a projectile into the level's projectile pool.                                  |
+| level_spawn_particles_explosion | void                    | struct Level *level, float x, float y, int count, Color fg                                | Spawns an explosion particle burst at the given position.                                 |
+| level_spawn_particles_sparkle   | void                    | struct Level *level, float x, float y, int count, Color fg                                | Spawns a sparkle particle burst at the given position.                                   |
+| level_update               | void                         | struct Level *level, float dt                                                           | Updates all active projectiles and particles by dt seconds.                               |
 | level_get_name             | char*                        | struct Level *level                                                                     | Returns the name of the level                                                             |
 | level_get_sizeX            | int                          | struct Level *level                                                                     | Returns the width (sizeX) of the level                                                    |
 | level_get_sizeY            | int                          | struct Level *level                                                                     | Returns the height (sizeY) of the level                                                   |

@@ -23,6 +23,14 @@ The `Collision` module provides 2D collision detection routines between geometri
 | collision_check_player_point      | int  | struct GameObject_Player *player, struct GameObject_Point *point               | Returns `1` if the player touches the point (respecting texture transparency), `0` else. |
 | collision_check_player_player     | int  | struct GameObject_Player *p1, struct GameObject_Player *p2                     | Returns `1` if two players intersect, `0` otherwise.                                     |
 
+### Projectile Intersections
+
+| Name                             | Type | Arguments                                                                      | Description                                                                              |
+|----------------------------------|------|--------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|
+| collision_check_projectile_rect   | int  | struct GameObject_Projectile *proj, struct GameObject_Rectangle *rect          | Returns `1` if the projectile is within the rectangle's bounds, `0` otherwise.          |
+| collision_check_projectile_ellipse| int  | struct GameObject_Projectile *proj, struct GameObject_Ellipse *ellipse         | Returns `1` if the projectile is inside the ellipse or circle, `0` otherwise.           |
+| collision_check_projectile_player | int  | struct GameObject_Projectile *proj, struct GameObject_Player *player            | Returns `1` if the projectile hits the player entity, `0` otherwise.                    |
+
 ### Boundary Control
 
 | Name                             | Type | Arguments                                                                      | Description                                                                              |
