@@ -140,3 +140,4 @@ Example programs are available in the `examples/` directory:
 - `examples/09_projectiles_and_particles.c`: Real-time space shooter featuring lasers, enemy projectiles, and particle explosions.
 - `examples/10_camera_and_world.c`: Vast open world (140x45) with landmarks, collectible gems, and smooth camera following.
 - `examples/11_physics_and_platformer.c`: 2D platformer physics with gravity, jump power, solid platforms, and interactive bouncing objects.
+- `examples/12_dungeon_escape.c`: Massive retro 1989 platformer dungeon escape (200x50 world) with running jumps, spike traps, collapsible floors, pressure plates, sword combat, and potion vials.
