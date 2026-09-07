@@ -86,7 +86,7 @@ static void reset_dungeon(void) {
     g_hero->vy = 0.0f;
     g_hero->character = '@';
     player_set_health(g_hero, 3);
-    player_set_speed(g_hero, 16.0f);
+    player_set_speed(g_hero, 12.0f);
     player_set_color(g_hero, COLOR_BRIGHT_WHITE, COLOR_DEFAULT);
 
     g_world->base.cam_x = 0.0f;
@@ -183,6 +183,7 @@ static void hero_take_hit(int dmg) {
 }
 
 static void update(struct Engine *engine, float dt) {
+    if (dt > 0.04f) dt = 0.04f;
     static int prev_esc = 0;
     int esc = input_is_key_down(KEY_ESCAPE);
 
@@ -324,7 +325,7 @@ static void update(struct Engine *engine, float dt) {
     if (g_sword_item != NULL && !g_has_sword && hero_touches_point(g_hero, g_sword_item)) {
         g_has_sword = 1;
         g_sword_item->character = ' ';
-        player_set_speed(g_hero, 20.0f);
+        player_set_speed(g_hero, 15.0f);
         level_spawn_particles_sparkle(lvl, (float)g_sword_item->position.x, (float)g_sword_item->position.y, 25, COLOR_BRIGHT_CYAN);
     }
 
