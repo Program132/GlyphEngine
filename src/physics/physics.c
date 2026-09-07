@@ -58,9 +58,9 @@ void physics_simulate_player(struct GameObject_Player *player, struct Level *lev
 
         if (aabb_overlap(new_x, new_y, (float)pw, (float)ph, (float)r->position.x, (float)r->position.y, (float)r->width, (float)r->height)) {
             if (player->vx > 0.0f) {
-                new_x = (float)r->position.x - (float)pw;
+                new_x = (float)r->position.x - (float)pw - 0.001f;
             } else if (player->vx < 0.0f) {
-                new_x = (float)(r->position.x + r->width);
+                new_x = (float)(r->position.x + r->width) + 0.001f;
             }
             player->vx = 0.0f;
         }
