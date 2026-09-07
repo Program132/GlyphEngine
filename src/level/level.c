@@ -4,6 +4,25 @@
 #include <string.h>
 #include "../utils/utils.h"
 
+struct ScreenCell {
+    char ch;
+    Color fg;
+    Color bg;
+};
+
+static struct ScreenCell *g_prev_cells = NULL;
+static int g_prev_cols = 0;
+static int g_prev_rows = 0;
+
+void level_reset_screen_buffer(void) {
+    if (g_prev_cells != NULL) {
+        free(g_prev_cells);
+        g_prev_cells = NULL;
+    }
+    g_prev_cols = 0;
+    g_prev_rows = 0;
+}
+
 struct Level* level_new(char* levelName, int sizeX, int sizeY, char defaultCharacter) {
     struct Level *level = malloc(sizeof(struct Level));
     if (level == NULL) {return NULL;}
@@ -88,67 +107,45 @@ void level_build(struct Level *level, char* levelName, int sizeX, int sizeY, cha
 }
 
 void level_display(struct Level *level) {
-    clearConsoleScreen();
-    
     int render_w = level->is_camera_enabled ? level->viewport_w : level->sizeX;
     int render_h = level->is_camera_enabled ? level->viewport_h : level->sizeY;
     int cam_offset_x = level->is_camera_enabled ? (int)level->cam_x : 0;
     int cam_offset_y = level->is_camera_enabled ? (int)level->cam_y : 0;
 
-    int max_cell_size = 24;
-    int buffer_size = (render_h + MAX_HUD_LINES * 2 + 4) * (render_w * max_cell_size + 64) + 1024;
-    char *buffer = malloc(buffer_size);
-    if (buffer == NULL) return;
-    int buf_idx = 0;
+    int total_rows = 0;
+    for (int i = 0; i < MAX_HUD_LINES; i++) {
+        if (level->hud_top[i].is_active) total_rows++;
+    }
+    if (level->hud_top_separator != '\0') total_rows++;
+    total_rows += render_h;
+    if (level->hud_bottom_separator != '\0') total_rows++;
+    for (int i = 0; i < MAX_HUD_LINES; i++) {
+        if (level->hud_bottom[i].is_active) total_rows++;
+    }
+    int total_cols = render_w;
 
-    Color current_fg = COLOR_DEFAULT;
-    Color current_bg = COLOR_DEFAULT;
+    struct ScreenCell *curr_cells = malloc(sizeof(struct ScreenCell) * total_rows * total_cols);
+    if (curr_cells == NULL) return;
+
+    int cur_r = 0;
 
     for (int i = 0; i < MAX_HUD_LINES; i++) {
         if (level->hud_top[i].is_active) {
-            if (level->hud_top[i].fg != current_fg) {
-                const char *fg_ansi = color_to_ansi_fg(level->hud_top[i].fg);
-                while (*fg_ansi) buffer[buf_idx++] = *fg_ansi++;
-                current_fg = level->hud_top[i].fg;
-            }
-            if (level->hud_top[i].bg != current_bg) {
-                const char *bg_ansi = color_to_ansi_bg(level->hud_top[i].bg);
-                while (*bg_ansi) buffer[buf_idx++] = *bg_ansi++;
-                current_bg = level->hud_top[i].bg;
-            }
             const char *str = level->hud_top[i].text;
-            while (*str) buffer[buf_idx++] = *str++;
-            if (current_fg != COLOR_DEFAULT || current_bg != COLOR_DEFAULT) {
-                const char *reset_ansi = color_reset_ansi();
-                while (*reset_ansi) buffer[buf_idx++] = *reset_ansi++;
-                current_fg = COLOR_DEFAULT;
-                current_bg = COLOR_DEFAULT;
+            int slen = (int)strlen(str);
+            for (int c = 0; c < total_cols; c++) {
+                char ch = (c < slen) ? str[c] : ' ';
+                curr_cells[cur_r * total_cols + c] = (struct ScreenCell){ch, level->hud_top[i].fg, level->hud_top[i].bg};
             }
-            buffer[buf_idx++] = '\n';
+            cur_r++;
         }
     }
 
     if (level->hud_top_separator != '\0') {
-        if (level->hud_top_sep_fg != current_fg) {
-            const char *fg_ansi = color_to_ansi_fg(level->hud_top_sep_fg);
-            while (*fg_ansi) buffer[buf_idx++] = *fg_ansi++;
-            current_fg = level->hud_top_sep_fg;
+        for (int c = 0; c < total_cols; c++) {
+            curr_cells[cur_r * total_cols + c] = (struct ScreenCell){level->hud_top_separator, level->hud_top_sep_fg, level->hud_top_sep_bg};
         }
-        if (level->hud_top_sep_bg != current_bg) {
-            const char *bg_ansi = color_to_ansi_bg(level->hud_top_sep_bg);
-            while (*bg_ansi) buffer[buf_idx++] = *bg_ansi++;
-            current_bg = level->hud_top_sep_bg;
-        }
-        for (int x = 0; x < render_w; x++) {
-            buffer[buf_idx++] = level->hud_top_separator;
-        }
-        if (current_fg != COLOR_DEFAULT || current_bg != COLOR_DEFAULT) {
-            const char *reset_ansi = color_reset_ansi();
-            while (*reset_ansi) buffer[buf_idx++] = *reset_ansi++;
-            current_fg = COLOR_DEFAULT;
-            current_bg = COLOR_DEFAULT;
-        }
-        buffer[buf_idx++] = '\n';
+        cur_r++;
     }
 
     for (int vy = 0; vy < render_h; vy++) {
@@ -158,7 +155,7 @@ void level_display(struct Level *level) {
             char toPrint = (x >= 0 && x < level->sizeX && y >= 0 && y < level->sizeY) ? level->defaultCharacter : ' ';
             Color cell_fg = (x >= 0 && x < level->sizeX && y >= 0 && y < level->sizeY) ? level->default_fg : COLOR_DEFAULT;
             Color cell_bg = (x >= 0 && x < level->sizeX && y >= 0 && y < level->sizeY) ? level->default_bg : COLOR_DEFAULT;
-            
+
             for (int i = 0; i < MAX_ARRAY_ELEMENTS; i++) {
                 struct GameObject_Ellipse *ell = level->ellipses[i];
                 if (ell != NULL) {
@@ -169,7 +166,7 @@ void level_display(struct Level *level) {
                     double dx_norm = (x - cx) / (rx > 0 ? rx : 1.0);
                     double dy_norm = (y - cy) / (ry > 0 ? ry : 1.0);
                     double val = dx_norm * dx_norm + dy_norm * dy_norm;
-                    
+
                     int inside = (val <= 1.0);
                     int border = (val >= 0.5 && val <= 1.2);
 
@@ -193,16 +190,16 @@ void level_display(struct Level *level) {
                     }
                 }
             }
-            
+
             for (int i = 0; i < MAX_ARRAY_ELEMENTS; i++) {
                 struct GameObject_Rectangle *rect = level->rectangles[i];
                 if (rect != NULL) {
                     if (x >= rect->position.x && x < rect->position.x + rect->width && 
                         y >= rect->position.y && y < rect->position.y + rect->height) {
-                        
+
                         int is_border = (x == rect->position.x || x == rect->position.x + rect->width - 1 ||
                                          y == rect->position.y || y == rect->position.y + rect->height - 1);
-                        
+
                         if (rect->filled || is_border || rect->width <= 2 || rect->height <= 2) {
                             if (rect->texture != NULL) {
                                 int tx = (x - rect->position.x) % rect->texture->width;
@@ -222,7 +219,7 @@ void level_display(struct Level *level) {
                     }
                 }
             }
-            
+
             for (int i = 0; i < MAX_ARRAY_ELEMENTS; i++) {
                 struct GameObject_Point *pt = level->points[i];
                 if (pt != NULL && pt->character != '\0') {
@@ -292,85 +289,135 @@ void level_display(struct Level *level) {
                     }
                 }
             }
-            
-            if (cell_fg != current_fg) {
-                const char *fg_ansi = color_to_ansi_fg(cell_fg);
-                while (*fg_ansi) buffer[buf_idx++] = *fg_ansi++;
-                current_fg = cell_fg;
-            }
-            if (cell_bg != current_bg) {
-                const char *bg_ansi = color_to_ansi_bg(cell_bg);
-                while (*bg_ansi) buffer[buf_idx++] = *bg_ansi++;
-                current_bg = cell_bg;
-            }
-            buffer[buf_idx++] = toPrint;
+
+            curr_cells[cur_r * total_cols + vx] = (struct ScreenCell){toPrint, cell_fg, cell_bg};
         }
-        if (current_fg != COLOR_DEFAULT || current_bg != COLOR_DEFAULT) {
-            const char *reset_ansi = color_reset_ansi();
-            while (*reset_ansi) buffer[buf_idx++] = *reset_ansi++;
-            current_fg = COLOR_DEFAULT;
-            current_bg = COLOR_DEFAULT;
-        }
-        buffer[buf_idx++] = '\n';
+        cur_r++;
     }
 
     if (level->hud_bottom_separator != '\0') {
-        if (level->hud_bottom_sep_fg != current_fg) {
-            const char *fg_ansi = color_to_ansi_fg(level->hud_bottom_sep_fg);
-            while (*fg_ansi) buffer[buf_idx++] = *fg_ansi++;
-            current_fg = level->hud_bottom_sep_fg;
+        for (int c = 0; c < total_cols; c++) {
+            curr_cells[cur_r * total_cols + c] = (struct ScreenCell){level->hud_bottom_separator, level->hud_bottom_sep_fg, level->hud_bottom_sep_bg};
         }
-        if (level->hud_bottom_sep_bg != current_bg) {
-            const char *bg_ansi = color_to_ansi_bg(level->hud_bottom_sep_bg);
-            while (*bg_ansi) buffer[buf_idx++] = *bg_ansi++;
-            current_bg = level->hud_bottom_sep_bg;
-        }
-        for (int x = 0; x < render_w; x++) {
-            buffer[buf_idx++] = level->hud_bottom_separator;
-        }
-        if (current_fg != COLOR_DEFAULT || current_bg != COLOR_DEFAULT) {
-            const char *reset_ansi = color_reset_ansi();
-            while (*reset_ansi) buffer[buf_idx++] = *reset_ansi++;
-            current_fg = COLOR_DEFAULT;
-            current_bg = COLOR_DEFAULT;
-        }
-        buffer[buf_idx++] = '\n';
+        cur_r++;
     }
 
     for (int i = 0; i < MAX_HUD_LINES; i++) {
         if (level->hud_bottom[i].is_active) {
-            if (level->hud_bottom[i].fg != current_fg) {
-                const char *fg_ansi = color_to_ansi_fg(level->hud_bottom[i].fg);
-                while (*fg_ansi) buffer[buf_idx++] = *fg_ansi++;
-                current_fg = level->hud_bottom[i].fg;
-            }
-            if (level->hud_bottom[i].bg != current_bg) {
-                const char *bg_ansi = color_to_ansi_bg(level->hud_bottom[i].bg);
-                while (*bg_ansi) buffer[buf_idx++] = *bg_ansi++;
-                current_bg = level->hud_bottom[i].bg;
-            }
             const char *str = level->hud_bottom[i].text;
-            while (*str) buffer[buf_idx++] = *str++;
-            if (current_fg != COLOR_DEFAULT || current_bg != COLOR_DEFAULT) {
-                const char *reset_ansi = color_reset_ansi();
-                while (*reset_ansi) buffer[buf_idx++] = *reset_ansi++;
-                current_fg = COLOR_DEFAULT;
-                current_bg = COLOR_DEFAULT;
+            int slen = (int)strlen(str);
+            for (int c = 0; c < total_cols; c++) {
+                char ch = (c < slen) ? str[c] : ' ';
+                curr_cells[cur_r * total_cols + c] = (struct ScreenCell){ch, level->hud_bottom[i].fg, level->hud_bottom[i].bg};
             }
-            buffer[buf_idx++] = '\n';
+            cur_r++;
         }
     }
 
-    if (current_fg != COLOR_DEFAULT || current_bg != COLOR_DEFAULT) {
-        const char *reset_ansi = color_reset_ansi();
-        while (*reset_ansi) buffer[buf_idx++] = *reset_ansi++;
+    int buf_cap = total_rows * (total_cols * 32 + 32) + 4096;
+    char *out_buf = malloc(buf_cap);
+    if (out_buf == NULL) {
+        free(curr_cells);
+        return;
     }
-    buffer[buf_idx] = '\0';
-    
-    printf("%s", buffer);
-    fflush(stdout);
-    
-    free(buffer);
+    int out_idx = 0;
+
+    int need_full_redraw = (g_prev_cells == NULL || g_prev_rows != total_rows || g_prev_cols != total_cols);
+
+    Color active_fg = COLOR_DEFAULT;
+    Color active_bg = COLOR_DEFAULT;
+
+    if (need_full_redraw) {
+        clearConsoleScreen();
+        for (int r = 0; r < total_rows; r++) {
+            for (int c = 0; c < total_cols; c++) {
+                struct ScreenCell *cell = &curr_cells[r * total_cols + c];
+                if (cell->fg != active_fg) {
+                    const char *fg_ansi = color_to_ansi_fg(cell->fg);
+                    while (*fg_ansi) out_buf[out_idx++] = *fg_ansi++;
+                    active_fg = cell->fg;
+                }
+                if (cell->bg != active_bg) {
+                    const char *bg_ansi = color_to_ansi_bg(cell->bg);
+                    while (*bg_ansi) out_buf[out_idx++] = *bg_ansi++;
+                    active_bg = cell->bg;
+                }
+                out_buf[out_idx++] = cell->ch;
+            }
+            if (active_fg != COLOR_DEFAULT || active_bg != COLOR_DEFAULT) {
+                const char *rst = color_reset_ansi();
+                while (*rst) out_buf[out_idx++] = *rst++;
+                active_fg = COLOR_DEFAULT;
+                active_bg = COLOR_DEFAULT;
+            }
+            if (r < total_rows - 1) {
+                out_buf[out_idx++] = '\n';
+            }
+        }
+    } else {
+        for (int r = 0; r < total_rows; r++) {
+            int c = 0;
+            while (c < total_cols) {
+                int idx = r * total_cols + c;
+                if (curr_cells[idx].ch != g_prev_cells[idx].ch ||
+                    curr_cells[idx].fg != g_prev_cells[idx].fg ||
+                    curr_cells[idx].bg != g_prev_cells[idx].bg) {
+
+                    out_idx += snprintf(&out_buf[out_idx], buf_cap - out_idx, "\033[%d;%dH", r + 1, c + 1);
+
+                    while (c < total_cols) {
+                        int cidx = r * total_cols + c;
+                        if (curr_cells[cidx].ch == g_prev_cells[cidx].ch &&
+                            curr_cells[cidx].fg == g_prev_cells[cidx].fg &&
+                            curr_cells[cidx].bg == g_prev_cells[cidx].bg) {
+                            break;
+                        }
+                        struct ScreenCell *cell = &curr_cells[cidx];
+                        if (cell->fg != active_fg) {
+                            const char *fg_ansi = color_to_ansi_fg(cell->fg);
+                            while (*fg_ansi) out_buf[out_idx++] = *fg_ansi++;
+                            active_fg = cell->fg;
+                        }
+                        if (cell->bg != active_bg) {
+                            const char *bg_ansi = color_to_ansi_bg(cell->bg);
+                            while (*bg_ansi) out_buf[out_idx++] = *bg_ansi++;
+                            active_bg = cell->bg;
+                        }
+                        out_buf[out_idx++] = cell->ch;
+                        c++;
+                    }
+                } else {
+                    c++;
+                }
+            }
+        }
+    }
+
+    if (active_fg != COLOR_DEFAULT || active_bg != COLOR_DEFAULT) {
+        const char *rst = color_reset_ansi();
+        while (*rst) out_buf[out_idx++] = *rst++;
+    }
+    out_buf[out_idx] = '\0';
+
+    if (out_idx > 0) {
+        fputs(out_buf, stdout);
+        fflush(stdout);
+    }
+
+    free(out_buf);
+
+    if (g_prev_cells == NULL || g_prev_rows != total_rows || g_prev_cols != total_cols) {
+        if (g_prev_cells != NULL) free(g_prev_cells);
+        g_prev_cells = malloc(sizeof(struct ScreenCell) * total_rows * total_cols);
+        g_prev_rows = total_rows;
+        g_prev_cols = total_cols;
+    }
+
+    if (g_prev_cells != NULL) {
+        memcpy(g_prev_cells, curr_cells, sizeof(struct ScreenCell) * total_rows * total_cols);
+    }
+
+    free(curr_cells);
 }
 
 void level_add_point(struct Level *level, struct GameObject_Point *point) {

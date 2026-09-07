@@ -43,12 +43,16 @@ void engine_stop(struct Engine* engine) {
 void engine_set_level(struct Engine* engine, struct Level *new_level) {
     if (engine != NULL) {
         engine->current_level = new_level;
+        level_reset_screen_buffer();
+        level_ui_reset_screen_buffer();
     }
 }
 
 void engine_set_level_ui(struct Engine* engine, struct LevelUI *ui) {
     if (engine != NULL) {
         engine->current_ui = ui;
+        level_reset_screen_buffer();
+        level_ui_reset_screen_buffer();
     }
 }
 

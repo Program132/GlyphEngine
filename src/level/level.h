@@ -96,5 +96,6 @@ void level_set_camera(struct Level *level, float cam_x, float cam_y);
 void level_enable_camera(struct Level *level, int viewport_w, int viewport_h);
 void level_disable_camera(struct Level *level);
 void level_free(struct Level *level);
+void level_reset_screen_buffer(void);
 
 #endif

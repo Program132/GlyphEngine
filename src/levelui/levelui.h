@@ -38,6 +38,7 @@ struct UIButton* level_ui_get_focused_button(struct LevelUI *ui);
 void level_ui_click_focused(struct LevelUI *ui);
 void level_ui_handle_input(struct LevelUI *ui);
 void level_ui_display(struct LevelUI *ui);
+void level_ui_reset_screen_buffer(void);
 struct Level* level_ui_to_level(struct LevelUI *ui);
 
 #endif
