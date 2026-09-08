@@ -1,7 +1,7 @@
-#include "src/engine/engine.h"
-#include "src/gameobject/square/square.h"
-#include "src/gameobject/circle/circle.h"
-#include "src/inputs/inputs.h"
+#include "../src/engine/engine.h"
+#include "../src/gameobject/square/square.h"
+#include "../src/gameobject/circle/circle.h"
+#include "../src/inputs/inputs.h"
 #include <stdio.h>
 
 struct GameObject_Rectangle* my_square;

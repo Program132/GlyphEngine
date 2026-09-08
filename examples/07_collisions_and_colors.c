@@ -145,7 +145,6 @@ int main() {
     engine_set_update_callback(engine, update);
     engine_run(engine, 30);
 
-    texture_free(ship_tex);
     engine_free(engine);
 
     return 0;
