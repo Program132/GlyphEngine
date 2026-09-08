@@ -153,12 +153,12 @@ void level_ui_click_focused(struct LevelUI *ui) {
 void level_ui_handle_input(struct LevelUI *ui) {
     if (ui == NULL) return;
 
-    static int prev_up = 0;
-    static int prev_down = 0;
-    static int prev_action = 0;
+    static int prev_up = 1;
+    static int prev_down = 1;
+    static int prev_action = 1;
 
     int up = input_is_key_down(KEY_UP) || input_is_key_down('w') || input_is_key_down('W') || input_is_key_down('z') || input_is_key_down('Z');
-    int down = input_is_key_down(KEY_DOWN) || input_is_key_down('s') || input_is_key_down('S') || input_is_key_down(KEY_TAB);
+    int down = input_is_key_down(KEY_DOWN) || input_is_key_down('s') || input_is_key_down('S');
     int action = input_is_key_down(KEY_ENTER) || input_is_key_down(KEY_RETURN) || input_is_key_down(KEY_SPACE);
 
     if (up && !prev_up) {

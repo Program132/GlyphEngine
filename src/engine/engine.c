@@ -103,6 +103,7 @@ void engine_run(struct Engine* engine, int fps) {
     double last_time = get_time_in_seconds();
 
     hideCursor();
+    input_flush();
 
     while (engine->is_running) {
         if (engine->exit_on_escape && input_is_key_down(KEY_ESCAPE)) {

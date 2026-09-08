@@ -27,7 +27,7 @@ static void ensure_vtp(void) {
 
 void clearConsoleScreen(void) {
     ensure_vtp();
-    printf("\033[H");
+    printf("\033[2J\033[H");
     fflush(stdout);
 }
 
