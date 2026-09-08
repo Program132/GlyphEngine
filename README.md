@@ -1,26 +1,6 @@
 # GlyphEngine
 
-Minimalist 2D text-based game engine for the terminal (C99).
-
-## Features
-
-- Double-buffered console rendering (flicker-free)
-- ANSI 16-color palette (foreground & background) with state-change optimization
-- 2D Collision detection module (AABB, circle/ellipse, player, clamp, boundaries)
-- Delta time calculation and target framerate cap
-- Real-time keyboard input polling (non-blocking)
-- 2D ASCII Texturing system with transparency support
-- In-game Text & HUD labels (`GameObject_Text`) with custom positioning and colors
-- Off-canvas HUD system (`HUD_TOP`, `HUD_BOTTOM`) with full-width separators outside the game grid
-- Dedicated `LevelUI` scene system with interactive buttons (`UIButton`), styled panels (`UIPanel`), and keyboard navigation
-- Large-scale worlds (`LevelWorld`) with viewport scrolling and smooth delta-time camera tracking
-- 2D Physics system (`PhysicsBody`) with universal gravity, jump power, solid platform landings, and bounce simulation
-- Projectile system (`GameObject_Projectile`) with sub-pixel float velocities, lifetime, damage, and collision checks
-- Particle system (`ParticleSystem`) with burst presets (explosions, sparkles), fading ANSI colors, and pool management
-- Dedicated `GameObject_Player` with sub-pixel delta movement and health
-- 2D geometric shapes (Point, Rectangle, Square, Ellipse, Circle)
-- Cascading memory management (`engine_free`)
-
+Minimalist 2D text-based game engine for the terminal.
 ## Building
 
 Requires `CMake` and a C compiler (`gcc`, `clang`, or `MSVC`).
@@ -72,7 +52,7 @@ void update(struct Engine* engine, float dt) {
 
 int main() {
     struct Level* level = level_new("My Game", 60, 20, '.');
-    level_set_default_color(level, COLOR_BRIGHT_BLACK, COLOR_DEFAULT);
+    level_set_default_color(level, color_rgb(80, 80, 100), COLOR_DEFAULT);
 
     struct Engine* engine = engine_new(level, 60, 20);
 
@@ -83,11 +63,11 @@ int main() {
     struct Texture* hero_tex = texture_new(3, 3, hero_sprite, ' ');
 
     player = player_new_textured(10, 8, hero_tex, 15.0f);
-    player_set_color(player, COLOR_BRIGHT_GREEN, COLOR_DEFAULT);
+    player_set_color(player, color_rgb(100, 255, 120), COLOR_DEFAULT);
     level_add_player(level, player);
 
     engine_set_update_callback(engine, update);
-    engine_run(engine, 30);
+    engine_run(engine, 60);
 
     engine_free(engine);
 
@@ -101,23 +81,25 @@ Detailed documentation for each module is located in the [doc/](doc/) directory:
 
 - **Engine & Scenes**
   - [Engine](doc/engine.md) — Main loop, framerate, and callbacks.
-  - [Level](doc/level.md) — Object container, grid, rendering, and off-canvas HUD.
+  - [Level](doc/level.md) — Object container, grid, rendering, dynamic lighting, and off-canvas HUD.
   - [LevelUI](doc/levelui.md) — GUI scenes, buttons, styled panels, and keyboard navigation.
   - [LevelWorld](doc/levelworld.md) — Large maps, viewport scrolling, and smooth camera tracking.
-- **Physics & Styling**
+- **Lighting & Visuals**
+  - [Light](doc/light.md) — Point lights, Bresenham line-of-sight hard shadows, and torch flame flicker.
+  - [Animation](doc/animation.md) — Frame-by-frame sprite animation with custom durations and playback modes.
+  - [Texture](doc/texture.md) — Multi-character ASCII art patterns and transparency.
+  - [Color](doc/color.md) — TrueColor 24-bit RGB (16.7M colors), ANSI 16-color hybrid palette, lerping, and brightness helpers.
+- **Physics & Mechanics**
   - [Collision](doc/collision.md) — 2D intersection routines, boundary checks, and clamping.
   - [Physics](doc/physics.md) — Universal gravity, jump power, solid platforms, and bouncing.
-  - [Color](doc/color.md) — ANSI 16-color enumeration and styling helpers.
   - [Projectile](doc/projectile.md) — Projectile entities, trajectories, damage, and lifespan.
-  - [Particle](doc/particle.md) — Pool-based particle effects, ANSI color fades, and burst presets.
+  - [Particle](doc/particle.md) — Pool-based particle effects, TrueColor/ANSI color fades, and burst presets.
 - **Inputs & Utilities**
   - [Inputs](doc/inputs.md) — Real-time key state polling and keycodes.
   - [Utils](doc/utils.md) — Screen clearing and cursor control.
-- **Texturing & Graphics**
-  - [Texture](doc/texture.md) — Multi-character ASCII art patterns and transparency.
 - **Game Objects & UI Components**
   - [Player](doc/GameObject_Player.md) — Dedicated player entity with sub-pixel movement, health, and colors.
-  - [Text](doc/GameObject_Text.md) — Screen text and HUD labels with custom position and ANSI colors.
+  - [Text](doc/GameObject_Text.md) — Screen text and HUD labels with custom position and colors.
   - [Point](doc/GameObject_Points.md) — Single character point.
   - [Rectangle](doc/GameObject_Rectangles.md) — Solid or textured rectangle.
   - [Square](doc/GameObject_Squares.md) — Square helper for rectangle.
@@ -140,4 +122,7 @@ Example programs are available in the `examples/` directory:
 - `examples/09_projectiles_and_particles.c`: Real-time space shooter featuring lasers, enemy projectiles, and particle explosions.
 - `examples/10_camera_and_world.c`: Vast open world (140x45) with landmarks, collectible gems, and smooth camera following.
 - `examples/11_physics_and_platformer.c`: 2D platformer physics with gravity, jump power, solid platforms, and interactive bouncing objects.
-- `examples/12_dungeon_escape.c`: Massive retro 1989 platformer dungeon escape (200x50 world) with running jumps, spike traps, collapsible floors, pressure plates, sword combat, and potion vials.
+- `examples/12_dungeon_escape.c`: Massive retro platformer dungeon escape (200x50 world) with running jumps, spike traps, collapsible floors, pressure plates, sword combat, and potion vials.
+- `examples/13_dungeon_master.c`: Epic dungeon master adventure with animated sprites (running knight, slimes, bat, torch, coins), animated combat, particle effects, and dynamic state transitions.
+- `examples/14_truecolor_showcase.c`: 24-bit TrueColor RGB showcase featuring animated fire pit, sine wave water plasma, rainbow color spectrum, and rainbow particles.
+- `examples/15_dynamic_lighting.c`: Real-time dynamic lighting and 2D hard shadows demo with movable player torch, flickering wall torches, glowing crystals with additive color mixing, and solid pillars casting shadows.
