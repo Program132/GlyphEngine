@@ -9,9 +9,11 @@
 #include "../projectile/projectile.h"
 #include "../particle/particle.h"
 #include "../color/color.h"
+#include "../light/light.h"
 
 #define MAX_ARRAY_ELEMENTS 500
 #define MAX_LEVEL_PROJECTILES 128
+#define MAX_LEVEL_LIGHTS 32
 
 typedef enum {
     HUD_TOP = 0,
@@ -54,6 +56,10 @@ struct Level {
     int viewport_h;
     float cam_x;
     float cam_y;
+    int lighting_enabled;
+    Color ambient_light;
+    struct Light *lights[MAX_LEVEL_LIGHTS];
+    int light_count;
 };
 
 struct Level* level_new(char* levelName, int sizeX, int sizeY, char defaultCharacter);
@@ -97,5 +103,12 @@ void level_enable_camera(struct Level *level, int viewport_w, int viewport_h);
 void level_disable_camera(struct Level *level);
 void level_free(struct Level *level);
 void level_reset_screen_buffer(void);
+
+void level_enable_lighting(struct Level *level, int enabled);
+void level_set_ambient_light(struct Level *level, Color ambient);
+void level_add_light(struct Level *level, struct Light *light);
+void level_remove_light(struct Level *level, struct Light *light);
+void level_clear_lights(struct Level *level);
+int level_is_solid_at(struct Level *level, int x, int y);
 
 #endif

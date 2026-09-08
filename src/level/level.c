@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "../utils/utils.h"
 
 struct ScreenCell {
@@ -104,6 +105,39 @@ void level_build(struct Level *level, char* levelName, int sizeX, int sizeY, cha
     level->viewport_h = sizeY;
     level->cam_x = 0.0f;
     level->cam_y = 0.0f;
+    level->lighting_enabled = 0;
+    level->ambient_light = color_rgb(30, 30, 45);
+    level->light_count = 0;
+    for (int i = 0; i < MAX_LEVEL_LIGHTS; i++) {
+        level->lights[i] = NULL;
+    }
+}
+
+static int check_line_of_sight(struct Level *level, int x0, int y0, int x1, int y1) {
+    int dx = abs(x1 - x0);
+    int dy = abs(y1 - y0);
+    int sx = (x0 < x1) ? 1 : -1;
+    int sy = (y0 < y1) ? 1 : -1;
+    int err = dx - dy;
+
+    int cx = x0;
+    int cy = y0;
+
+    while (1) {
+        if (cx == x1 && cy == y1) return 1;
+        if ((cx != x0 || cy != y0) && level_is_solid_at(level, cx, cy)) {
+            return 0;
+        }
+        int e2 = 2 * err;
+        if (e2 > -dy) {
+            err -= dy;
+            cx += sx;
+        }
+        if (e2 < dx) {
+            err += dx;
+            cy += sy;
+        }
+    }
 }
 
 void level_display(struct Level *level) {
@@ -147,6 +181,8 @@ void level_display(struct Level *level) {
         }
         cur_r++;
     }
+
+    int world_start_r = cur_r;
 
     for (int vy = 0; vy < render_h; vy++) {
         int y = vy + cam_offset_y;
@@ -293,6 +329,82 @@ void level_display(struct Level *level) {
             curr_cells[cur_r * total_cols + vx] = (struct ScreenCell){toPrint, cell_fg, cell_bg};
         }
         cur_r++;
+    }
+
+    if (level->lighting_enabled) {
+        float amb_r = (float)color_get_r(level->ambient_light) / 255.0f;
+        float amb_g = (float)color_get_g(level->ambient_light) / 255.0f;
+        float amb_b = (float)color_get_b(level->ambient_light) / 255.0f;
+
+        for (int vy = 0; vy < render_h; vy++) {
+            int wy = vy + cam_offset_y;
+            int row_idx = world_start_r + vy;
+
+            for (int vx = 0; vx < render_w; vx++) {
+                int wx = vx + cam_offset_x;
+                int cell_idx = row_idx * total_cols + vx;
+
+                float lit_r = amb_r;
+                float lit_g = amb_g;
+                float lit_b = amb_b;
+
+                for (int l = 0; l < MAX_LEVEL_LIGHTS; l++) {
+                    struct Light *light = level->lights[l];
+                    if (light == NULL || !light->is_active) continue;
+
+                    float dx = (float)wx - light->x;
+                    float dy = (float)wy - light->y;
+                    float dist_sq = dx * dx + dy * dy;
+                    float rad_sq = light->radius * light->radius;
+                    if (dist_sq > rad_sq) continue;
+
+                    if (light->cast_shadows) {
+                        int lx = (int)(light->x >= 0.0f ? light->x + 0.5f : light->x - 0.5f);
+                        int ly = (int)(light->y >= 0.0f ? light->y + 0.5f : light->y - 0.5f);
+                        if (!check_line_of_sight(level, lx, ly, wx, wy)) {
+                            continue;
+                        }
+                    }
+
+                    float dist = sqrtf(dist_sq);
+                    float atten = 1.0f - (dist / light->radius);
+                    float current_intensity = light_get_current_intensity(light);
+                    float factor = atten * current_intensity;
+
+                    lit_r += ((float)color_get_r(light->color) / 255.0f) * factor;
+                    lit_g += ((float)color_get_g(light->color) / 255.0f) * factor;
+                    lit_b += ((float)color_get_b(light->color) / 255.0f) * factor;
+                }
+
+                if (lit_r > 1.5f) lit_r = 1.5f;
+                if (lit_g > 1.5f) lit_g = 1.5f;
+                if (lit_b > 1.5f) lit_b = 1.5f;
+
+                struct ScreenCell *cell = &curr_cells[cell_idx];
+
+                if (lit_r < 0.03f && lit_g < 0.03f && lit_b < 0.03f && cell->ch != ' ') {
+                    cell->fg = color_rgb(5, 5, 10);
+                } else {
+                    int fg_r = (int)((float)color_get_r(cell->fg) * lit_r + 0.5f);
+                    int fg_g = (int)((float)color_get_g(cell->fg) * lit_g + 0.5f);
+                    int fg_b = (int)((float)color_get_b(cell->fg) * lit_b + 0.5f);
+                    if (fg_r > 255) fg_r = 255;
+                    if (fg_g > 255) fg_g = 255;
+                    if (fg_b > 255) fg_b = 255;
+                    cell->fg = color_rgb((unsigned char)fg_r, (unsigned char)fg_g, (unsigned char)fg_b);
+
+                    if (cell->bg != COLOR_DEFAULT) {
+                        int bg_r = (int)((float)color_get_r(cell->bg) * lit_r + 0.5f);
+                        int bg_g = (int)((float)color_get_g(cell->bg) * lit_g + 0.5f);
+                        int bg_b = (int)((float)color_get_b(cell->bg) * lit_b + 0.5f);
+                        if (bg_r > 255) bg_r = 255;
+                        if (bg_g > 255) bg_g = 255;
+                        if (bg_b > 255) bg_b = 255;
+                        cell->bg = color_rgb((unsigned char)bg_r, (unsigned char)bg_g, (unsigned char)bg_b);
+                    }
+                }
+            }
+        }
     }
 
     if (level->hud_bottom_separator != '\0') {
@@ -673,6 +785,11 @@ void level_update(struct Level *level, float dt) {
     if (level->particle_system != NULL) {
         particle_system_update(level->particle_system, dt);
     }
+    for (int i = 0; i < MAX_LEVEL_LIGHTS; i++) {
+        if (level->lights[i] != NULL && level->lights[i]->is_active) {
+            light_update(level->lights[i], dt);
+        }
+    }
 }
 
 char* level_get_name(struct Level *level) {
@@ -800,5 +917,67 @@ void level_free(struct Level *level) {
         particle_system_free(level->particle_system);
     }
     
+    for (int i = 0; i < MAX_LEVEL_LIGHTS; i++) {
+        if (level->lights[i] != NULL) {
+            light_free(level->lights[i]);
+            level->lights[i] = NULL;
+        }
+    }
+
     free(level);
+}
+
+void level_enable_lighting(struct Level *level, int enabled) {
+    if (level == NULL) return;
+    level->lighting_enabled = enabled;
+}
+
+void level_set_ambient_light(struct Level *level, Color ambient) {
+    if (level == NULL) return;
+    level->ambient_light = ambient;
+}
+
+void level_add_light(struct Level *level, struct Light *light) {
+    if (level == NULL || light == NULL) return;
+    for (int i = 0; i < MAX_LEVEL_LIGHTS; i++) {
+        if (level->lights[i] == NULL) {
+            level->lights[i] = light;
+            level->light_count++;
+            return;
+        }
+    }
+}
+
+void level_remove_light(struct Level *level, struct Light *light) {
+    if (level == NULL || light == NULL) return;
+    for (int i = 0; i < MAX_LEVEL_LIGHTS; i++) {
+        if (level->lights[i] == light) {
+            level->lights[i] = NULL;
+            level->light_count--;
+            return;
+        }
+    }
+}
+
+void level_clear_lights(struct Level *level) {
+    if (level == NULL) return;
+    for (int i = 0; i < MAX_LEVEL_LIGHTS; i++) {
+        level->lights[i] = NULL;
+    }
+    level->light_count = 0;
+}
+
+int level_is_solid_at(struct Level *level, int x, int y) {
+    if (level == NULL) return 0;
+    if (x < 0 || x >= level->sizeX || y < 0 || y >= level->sizeY) return 1;
+    for (int i = 0; i < MAX_ARRAY_ELEMENTS; i++) {
+        struct GameObject_Rectangle *r = level->rectangles[i];
+        if (r != NULL && r->is_solid) {
+            if (x >= r->position.x && x < r->position.x + r->width &&
+                y >= r->position.y && y < r->position.y + r->height) {
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
