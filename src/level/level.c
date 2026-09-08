@@ -314,7 +314,7 @@ void level_display(struct Level *level) {
         }
     }
 
-    int buf_cap = total_rows * (total_cols * 32 + 32) + 4096;
+    int buf_cap = total_rows * (total_cols * 48 + 64) + 8192;
     char *out_buf = malloc(buf_cap);
     if (out_buf == NULL) {
         free(curr_cells);

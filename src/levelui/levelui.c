@@ -259,7 +259,7 @@ void level_ui_display(struct LevelUI *ui) {
         }
     }
 
-    int buf_cap = total_rows * (total_cols * 32 + 32) + 4096;
+    int buf_cap = total_rows * (total_cols * 48 + 64) + 8192;
     char *out_buf = (char*)malloc(buf_cap);
     if (out_buf == NULL) {
         free(curr_cells);
