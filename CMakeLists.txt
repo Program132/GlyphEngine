@@ -49,4 +49,6 @@ add_executable(GlyphEngine
         src/engine/engine.c
         src/inputs/inputs.h
         src/inputs/inputs.c
+        src/animation/animation.h
+        src/animation/animation.c
 )
