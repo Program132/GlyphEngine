@@ -11,6 +11,7 @@
 #include "src/physics/physics.h"
 #include "src/collision/collision.h"
 #include "src/color/color.h"
+#include "src/animation/animation.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,6 +50,21 @@ static int g_guard_alive = 1;
 static int g_guard_hp = 3;
 static float g_guard_attack_cooldown = 0.0f;
 
+static struct GameObject_Player *g_skeleton = NULL;
+static int g_skeleton_alive = 1;
+static float g_skeleton_revive_timer = 0.0f;
+
+static struct GameObject_Point *g_blade_points[3];
+static struct GameObject_Point *g_torches[6];
+
+static struct Animation *g_anim_torch = NULL;
+static struct Animation *g_anim_hero_idle = NULL;
+static struct Animation *g_anim_hero_run = NULL;
+static struct Animation *g_anim_hero_attack = NULL;
+static struct Animation *g_anim_guard = NULL;
+static struct Animation *g_anim_blade = NULL;
+
+static float g_hero_attack_timer = 0.0f;
 static float g_game_time = 0.0f;
 static int g_has_sword = 0;
 static struct GameObject_Point *g_sword_item = NULL;
@@ -56,6 +72,7 @@ static struct GameObject_Point *g_sword_item = NULL;
 static enum GameState g_state = STATE_TITLE_MENU;
 static float g_death_timer = 0.0f;
 static float g_invuln_timer = 0.0f;
+static int g_prev_jump = 1;
 
 static struct GameObject_Text *g_go_time_text = NULL;
 static struct GameObject_Text *g_vic_time_text = NULL;
@@ -74,8 +91,12 @@ static void reset_dungeon(void) {
     g_guard_alive = 1;
     g_guard_hp = 3;
     g_guard_attack_cooldown = 0.0f;
+    g_skeleton_alive = 1;
+    g_skeleton_revive_timer = 0.0f;
     g_death_timer = 0.0f;
     g_invuln_timer = 0.0f;
+    g_hero_attack_timer = 0.0f;
+    g_prev_jump = 1;
 
     struct Level *lvl = level_world_as_level(g_world);
 
@@ -139,6 +160,16 @@ static void reset_dungeon(void) {
         player_set_color(g_guard, COLOR_BRIGHT_RED, COLOR_DEFAULT);
     }
 
+    if (g_skeleton != NULL) {
+        player_set_position(g_skeleton, 98, 30);
+        g_skeleton->exact_x = 98.0f;
+        g_skeleton->exact_y = 30.0f;
+        g_skeleton->vx = 0.0f;
+        g_skeleton->vy = 0.0f;
+        g_skeleton->character = 'S';
+        player_set_color(g_skeleton, COLOR_BRIGHT_WHITE, COLOR_DEFAULT);
+    }
+
     particle_system_clear(lvl->particle_system);
 }
 
@@ -184,7 +215,7 @@ static void hero_take_hit(int dmg) {
 
 static void update(struct Engine *engine, float dt) {
     if (dt > 0.04f) dt = 0.04f;
-    static int prev_esc = 0;
+    static int prev_esc = 1;
     int esc = input_is_key_down(KEY_ESCAPE);
 
     if (esc && !prev_esc) {
@@ -194,8 +225,10 @@ static void update(struct Engine *engine, float dt) {
             engine_set_level_ui(engine, g_title_ui);
             prev_esc = esc;
             return;
-        } else {
-            engine_stop(engine);
+        } else if (g_state == STATE_GAMEOVER || g_state == STATE_VICTORY) {
+            g_state = STATE_TITLE_MENU;
+            engine_set_level(engine, NULL);
+            engine_set_level_ui(engine, g_title_ui);
             prev_esc = esc;
             return;
         }
@@ -246,6 +279,30 @@ static void update(struct Engine *engine, float dt) {
 
     struct Level *lvl = level_world_as_level(g_world);
     g_game_time += dt;
+
+    animation_update(g_anim_torch, dt);
+    char torch_ch = animation_get_current_character(g_anim_torch);
+    Color torch_fg = animation_get_current_fg(g_anim_torch);
+    for (int i = 0; i < 6; i++) {
+        if (g_torches[i] != NULL) {
+            point_set_character(g_torches[i], torch_ch);
+            point_set_color(g_torches[i], torch_fg, COLOR_DEFAULT);
+        }
+    }
+
+    animation_update(g_anim_blade, dt);
+    char blade_ch = animation_get_current_character(g_anim_blade);
+    Color blade_fg = animation_get_current_fg(g_anim_blade);
+    for (int i = 0; i < 3; i++) {
+        if (g_blade_points[i] != NULL) {
+            point_set_character(g_blade_points[i], blade_ch);
+            point_set_color(g_blade_points[i], blade_fg, COLOR_DEFAULT);
+            if (blade_ch == 'X' && hero_touches_point(g_hero, g_blade_points[i])) {
+                hero_take_hit(2);
+            }
+        }
+    }
+
     if (g_invuln_timer > 0.0f) {
         g_invuln_timer -= dt;
         if (((int)(g_invuln_timer * 10.0f)) % 2 == 0) {
@@ -261,9 +318,39 @@ static void update(struct Engine *engine, float dt) {
     if (input_is_key_down(KEY_LEFT) || input_is_key_down('q') || input_is_key_down('a') || input_is_key_down('Q') || input_is_key_down('A')) move_x -= 1.0f;
     if (input_is_key_down(KEY_RIGHT) || input_is_key_down('d') || input_is_key_down('D')) move_x += 1.0f;
 
-    int jump_pressed = (input_is_key_down(KEY_SPACE) || input_is_key_down(KEY_UP) || input_is_key_down('z') || input_is_key_down('w') || input_is_key_down('Z') || input_is_key_down('W'));
+    int jump_raw = (input_is_key_down(KEY_SPACE) || input_is_key_down(KEY_UP) || input_is_key_down('z') || input_is_key_down('w') || input_is_key_down('Z') || input_is_key_down('W'));
+    int jump_pressed = (jump_raw && !g_prev_jump);
+    g_prev_jump = jump_raw;
+
+    int attack_pressed = (input_is_key_down('e') || input_is_key_down('x') || input_is_key_down('E') || input_is_key_down('X'));
+
+    if (attack_pressed && g_hero_attack_timer <= 0.0f) {
+        g_hero_attack_timer = 0.25f;
+        animation_reset(g_anim_hero_attack);
+        level_spawn_particles_sparkle(lvl, g_hero->exact_x + (move_x >= 0 ? 1.0f : -1.0f), g_hero->exact_y, 4, COLOR_BRIGHT_CYAN);
+    }
 
     physics_simulate_player(g_hero, lvl, move_x, jump_pressed, dt);
+
+    if (g_hero_attack_timer > 0.0f) {
+        g_hero_attack_timer -= dt;
+        animation_update(g_anim_hero_attack, dt);
+        g_hero->character = animation_get_current_character(g_anim_hero_attack);
+        if (g_invuln_timer <= 0.0f) {
+            player_set_color(g_hero, animation_get_current_fg(g_anim_hero_attack), COLOR_DEFAULT);
+        }
+    } else if (!g_hero->is_grounded) {
+        g_hero->character = '^';
+        if (g_invuln_timer <= 0.0f) player_set_color(g_hero, COLOR_BRIGHT_WHITE, COLOR_DEFAULT);
+    } else if (fabsf(move_x) > 0.1f) {
+        animation_update(g_anim_hero_run, dt);
+        g_hero->character = animation_get_current_character(g_anim_hero_run);
+        if (g_invuln_timer <= 0.0f) player_set_color(g_hero, animation_get_current_fg(g_anim_hero_run), COLOR_DEFAULT);
+    } else {
+        animation_update(g_anim_hero_idle, dt);
+        g_hero->character = animation_get_current_character(g_anim_hero_idle);
+        if (g_invuln_timer <= 0.0f) player_set_color(g_hero, animation_get_current_fg(g_anim_hero_idle), COLOR_DEFAULT);
+    }
 
     if (g_hero->exact_y > 45.0f) {
         hero_take_hit(100);
@@ -308,8 +395,7 @@ static void update(struct Engine *engine, float dt) {
     for (int i = 0; i < 10; i++) {
         if (g_spikes[i] != NULL && hero_touches_point(g_hero, g_spikes[i])) {
             hero_take_hit(1);
-            g_hero->vy = -12.0f;
-            break;
+            g_hero->vy = -10.0f;
         }
     }
 
@@ -329,7 +415,39 @@ static void update(struct Engine *engine, float dt) {
         level_spawn_particles_sparkle(lvl, (float)g_sword_item->position.x, (float)g_sword_item->position.y, 25, COLOR_BRIGHT_CYAN);
     }
 
+    if (g_skeleton != NULL) {
+        if (g_skeleton_alive) {
+            float s_dist_x = g_skeleton->exact_x - g_hero->exact_x;
+            float s_dist_y = g_skeleton->exact_y - g_hero->exact_y;
+            if (s_dist_y > -3.0f && s_dist_y < 3.0f && s_dist_x > -18.0f && s_dist_x < 18.0f) {
+                float s_dir = (s_dist_x > 0.0f) ? -1.0f : 1.0f;
+                physics_simulate_player(g_skeleton, lvl, s_dir * 0.4f, 0, dt);
+            }
+            if (collision_check_player_player(g_hero, g_skeleton)) {
+                if (g_hero_attack_timer > 0.0f) {
+                    g_skeleton_alive = 0;
+                    g_skeleton_revive_timer = 5.0f;
+                    g_skeleton->character = '%';
+                    player_set_color(g_skeleton, COLOR_BRIGHT_BLACK, COLOR_DEFAULT);
+                    level_spawn_particles_explosion(lvl, g_skeleton->exact_x, g_skeleton->exact_y, 15, COLOR_WHITE);
+                } else {
+                    hero_take_hit(1);
+                }
+            }
+        } else {
+            g_skeleton_revive_timer -= dt;
+            if (g_skeleton_revive_timer <= 0.0f) {
+                g_skeleton_alive = 1;
+                g_skeleton->character = 'S';
+                player_set_color(g_skeleton, COLOR_BRIGHT_WHITE, COLOR_DEFAULT);
+                level_spawn_particles_sparkle(lvl, g_skeleton->exact_x, g_skeleton->exact_y, 10, COLOR_BRIGHT_CYAN);
+            }
+        }
+    }
+
     if (g_guard != NULL && g_guard_alive) {
+        animation_update(g_anim_guard, dt);
+        g_guard->character = animation_get_current_character(g_anim_guard);
         float dist_x = g_guard->exact_x - g_hero->exact_x;
         float dist_y = g_guard->exact_y - g_hero->exact_y;
         if (dist_y > -4.0f && dist_y < 4.0f && dist_x > -25.0f && dist_x < 25.0f) {
@@ -341,14 +459,14 @@ static void update(struct Engine *engine, float dt) {
 
         g_guard_attack_cooldown -= dt;
         if (collision_check_player_player(g_hero, g_guard)) {
-            if (input_is_key_down('e') || input_is_key_down('x') || input_is_key_down('E') || input_is_key_down('X')) {
+            if (g_hero_attack_timer > 0.0f) {
                 if (g_has_sword) {
                     g_guard_hp--;
                     level_spawn_particles_sparkle(lvl, g_guard->exact_x, g_guard->exact_y, 10, COLOR_BRIGHT_YELLOW);
                     if (g_guard_hp <= 0) {
                         g_guard_alive = 0;
                         g_guard->character = '%';
-                        g_guard->fg = COLOR_RED;
+                        player_set_color(g_guard, COLOR_RED, COLOR_DEFAULT);
                         level_spawn_particles_explosion(lvl, g_guard->exact_x, g_guard->exact_y, 20, COLOR_RED);
                     }
                 } else {
@@ -365,7 +483,7 @@ static void update(struct Engine *engine, float dt) {
     if (g_hero->exact_x >= 188.0f && g_hero->exact_y >= 10.0f && g_hero->exact_y <= 16.0f) {
         g_state = STATE_VICTORY;
         char buf[64];
-        snprintf(buf, sizeof(buf), "Clear Time: %02d:%02d", (int)g_game_time / 60, (int)g_game_time % 60);
+        snprintf(buf, sizeof(buf), "ESCAPE TIME: %02d:%02d", (int)g_game_time / 60, (int)g_game_time % 60);
         text_set_content(g_vic_time_text, buf);
         engine_set_level(engine, NULL);
         engine_set_level_ui(engine, g_victory_ui);
@@ -376,15 +494,17 @@ static void update(struct Engine *engine, float dt) {
 
     char top_hud[256];
     char hp_pips[16] = "";
-    for (int i = 0; i < g_hero->health && i < 10; i++) strcat(hp_pips, "[]");
-    snprintf(top_hud, sizeof(top_hud), " HERO HP: %s (%d/%d) | SWORD: %s | TIME: %02d:%02d | LEVEL: THE ANCIENT DUNGEON ",
-             hp_pips, g_hero->health, g_hero->max_health,
-             g_has_sword ? "READY (/)" : "NONE",
-             (int)g_game_time / 60, (int)g_game_time % 60);
+    int hp = player_get_health(g_hero);
+    for (int i = 0; i < hp && i < 6; i++) strcat(hp_pips, "[]");
+    snprintf(top_hud, sizeof(top_hud), " HERO HP: %-6s (%d/3) | SWORD: %s | TIME: %02d:%02d | SKELETON: %s ",
+             hp_pips, hp,
+             g_has_sword ? "READY" : "NONE",
+             (int)g_game_time / 60, (int)g_game_time % 60,
+             g_skeleton_alive ? "LURKING" : "CRUMBLED");
     level_set_hud_text(lvl, HUD_TOP, 0, top_hud, COLOR_BRIGHT_YELLOW, COLOR_BLACK);
 
     char bottom_hud[256];
-    snprintf(bottom_hud, sizeof(bottom_hud), " [A/D] Run | [W/SPACE] Jump | [E/X] Strike | Pos: (%d,%d) | Gate: %s | [ESC] Menu ",
+    snprintf(bottom_hud, sizeof(bottom_hud), " [A/D] Move | [W/Space] Jump | [E/X] Slash | Pos: (%d,%d) | Gate: %s ",
              (int)g_hero->exact_x, (int)g_hero->exact_y,
              g_gate_opened ? "OPEN" : "LOCKED");
     level_set_hud_text(lvl, HUD_BOTTOM, 0, bottom_hud, COLOR_CYAN, COLOR_BLACK);
@@ -415,26 +535,26 @@ static void build_title_ui(void) {
     g_title_ui = level_ui_new("Title Menu", 90, 28, ' ');
     level_ui_set_default_color(g_title_ui, COLOR_WHITE, COLOR_DEFAULT);
 
-    struct UIPanel *p_title = panel_new_styled(4, 1, 82, 5, " GLYPH ENGINE RETRO ADVENTURE ", '=', ' ', COLOR_BRIGHT_YELLOW, COLOR_BLACK);
+    struct UIPanel *p_title = panel_new_styled(4, 1, 82, 5, " GLYPH ENGINE ANIMATED ADVENTURE ", '=', ' ', COLOR_BRIGHT_YELLOW, COLOR_BLACK);
     level_ui_add_panel(g_title_ui, p_title);
 
-    struct GameObject_Text *t_banner = text_new_colored(16, 3, "D U N G E O N   E S C A P E   ( 1 9 8 9 )", COLOR_BRIGHT_CYAN, COLOR_BLACK);
+    struct GameObject_Text *t_banner = text_new_colored(16, 3, "D U N G E O N   M A S T E R   ( 1 9 9 0 )", COLOR_BRIGHT_CYAN, COLOR_BLACK);
     level_ui_add_text(g_title_ui, t_banner);
 
-    struct UIPanel *p_story = panel_new_styled(4, 7, 52, 17, " STORY & OBJECTIVES ", '#', ' ', COLOR_YELLOW, COLOR_DEFAULT);
+    struct UIPanel *p_story = panel_new_styled(4, 7, 52, 17, " FEATURES & OBJECTIVES ", '#', ' ', COLOR_YELLOW, COLOR_DEFAULT);
     level_ui_add_panel(g_title_ui, p_story);
 
-    struct GameObject_Text *t_s1 = text_new_colored(6, 9, "Trapped deep within the ancient subterranean fortress!", COLOR_WHITE, COLOR_DEFAULT);
-    struct GameObject_Text *t_s2 = text_new_colored(6, 10, "Escape the dungeon before the sands of time run out!", COLOR_BRIGHT_WHITE, COLOR_DEFAULT);
-    struct GameObject_Text *t_s3 = text_new_colored(6, 12, "MISSION OBJECTIVES:", COLOR_BRIGHT_YELLOW, COLOR_DEFAULT);
-    struct GameObject_Text *t_s4 = text_new_colored(6, 13, "1. Run & jump over pits and dangerous spikes [^]", COLOR_WHITE, COLOR_DEFAULT);
-    struct GameObject_Text *t_s5 = text_new_colored(6, 14, "2. Step on the Pressure Plate [=] to raise Gate [|]", COLOR_WHITE, COLOR_DEFAULT);
-    struct GameObject_Text *t_s6 = text_new_colored(6, 15, "3. Find your trusty Sword [/] at (72, 14)", COLOR_WHITE, COLOR_DEFAULT);
-    struct GameObject_Text *t_s7 = text_new_colored(6, 16, "4. Collect Red Potions [!] to restore lost HP", COLOR_WHITE, COLOR_DEFAULT);
-    struct GameObject_Text *t_s8 = text_new_colored(6, 17, "5. Strike the Dungeon Guard [G] using [E] or [X]", COLOR_WHITE, COLOR_DEFAULT);
-    struct GameObject_Text *t_s9 = text_new_colored(6, 18, "6. Reach the Palace Exit [D] at (190, 13)!", COLOR_BRIGHT_GREEN, COLOR_DEFAULT);
-    struct GameObject_Text *t_s10 = text_new_colored(6, 20, "CONTROLS: [A/D] Move  |  [W/Space] Jump  |  [E/X] Attack", COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
-    struct GameObject_Text *t_s11 = text_new_colored(6, 22, "LEGEND: @:Hero  G:Guard  /:Sword  !:Potion  ^:Spike", COLOR_BRIGHT_MAGENTA, COLOR_DEFAULT);
+    struct GameObject_Text *t_s1 = text_new_colored(6, 9, "Trapped in the living labyrinth of Prince of Persia!", COLOR_WHITE, COLOR_DEFAULT);
+    struct GameObject_Text *t_s2 = text_new_colored(6, 10, "All game elements are powered by the Animation Engine!", COLOR_BRIGHT_WHITE, COLOR_DEFAULT);
+    struct GameObject_Text *t_s3 = text_new_colored(6, 12, "NEW ANIMATED FEATURES:", COLOR_BRIGHT_YELLOW, COLOR_DEFAULT);
+    struct GameObject_Text *t_s4 = text_new_colored(6, 13, "- Animated Hero: idle breathing, running, jumping", COLOR_WHITE, COLOR_DEFAULT);
+    struct GameObject_Text *t_s5 = text_new_colored(6, 14, "- Dynamic Sword Slashes [/] -> [-] -> [\\]", COLOR_WHITE, COLOR_DEFAULT);
+    struct GameObject_Text *t_s6 = text_new_colored(6, 15, "- Animated Wall Torches [* / ^ / .] flickering", COLOR_WHITE, COLOR_DEFAULT);
+    struct GameObject_Text *t_s7 = text_new_colored(6, 16, "- Chopper Blades [>< / X] opening and snapping", COLOR_WHITE, COLOR_DEFAULT);
+    struct GameObject_Text *t_s8 = text_new_colored(6, 17, "- Undying Skeleton Warrior [S] rising from bones", COLOR_WHITE, COLOR_DEFAULT);
+    struct GameObject_Text *t_s9 = text_new_colored(6, 18, "- Guard Combat [G] with patrolling animations", COLOR_BRIGHT_GREEN, COLOR_DEFAULT);
+    struct GameObject_Text *t_s10 = text_new_colored(6, 20, "CONTROLS: [A/D] Move | [W/Space] Jump | [E/X] Slash", COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
+    struct GameObject_Text *t_s11 = text_new_colored(6, 22, "REACH PALACE EXIT AT (190, 13) TO WIN!", COLOR_BRIGHT_MAGENTA, COLOR_DEFAULT);
 
     level_ui_add_text(g_title_ui, t_s1);
     level_ui_add_text(g_title_ui, t_s2);
@@ -498,7 +618,7 @@ static void build_victory_ui(void) {
     struct GameObject_Text *t_desc = text_new_colored(23, 9, "You conquered all traps and broke free into the light!", COLOR_WHITE, COLOR_DEFAULT);
     level_ui_add_text(g_victory_ui, t_desc);
 
-    g_vic_time_text = text_new_colored(35, 11, "Clear Time: 00:00", COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
+    g_vic_time_text = text_new_colored(35, 11, "ESCAPE TIME: 00:00", COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
     level_ui_add_text(g_victory_ui, g_vic_time_text);
 
     struct UIButton *btn_again = button_new(33, 14, 24, 3, "PLAY AGAIN");
@@ -511,7 +631,35 @@ static void build_victory_ui(void) {
 }
 
 int main(void) {
-    g_world = level_world_new("Dungeon Escape (1989)", 200, 50, 90, 28, ' ');
+    g_anim_hero_idle = animation_new(1);
+    animation_add_frame_char(g_anim_hero_idle, '@', COLOR_BRIGHT_WHITE, COLOR_DEFAULT, 0.4f);
+    animation_add_frame_char(g_anim_hero_idle, 'o', COLOR_BRIGHT_WHITE, COLOR_DEFAULT, 0.4f);
+
+    g_anim_hero_run = animation_new(1);
+    animation_add_frame_char(g_anim_hero_run, '@', COLOR_BRIGHT_WHITE, COLOR_DEFAULT, 0.12f);
+    animation_add_frame_char(g_anim_hero_run, '&', COLOR_BRIGHT_WHITE, COLOR_DEFAULT, 0.12f);
+
+    g_anim_hero_attack = animation_new(0);
+    animation_add_frame_char(g_anim_hero_attack, '/', COLOR_BRIGHT_CYAN, COLOR_DEFAULT, 0.08f);
+    animation_add_frame_char(g_anim_hero_attack, '-', COLOR_BRIGHT_WHITE, COLOR_DEFAULT, 0.08f);
+    animation_add_frame_char(g_anim_hero_attack, '\\', COLOR_BRIGHT_CYAN, COLOR_DEFAULT, 0.09f);
+
+    g_anim_guard = animation_new(1);
+    animation_add_frame_char(g_anim_guard, 'G', COLOR_BRIGHT_RED, COLOR_DEFAULT, 0.3f);
+    animation_add_frame_char(g_anim_guard, 'g', COLOR_RED, COLOR_DEFAULT, 0.3f);
+
+    g_anim_torch = animation_new(1);
+    animation_add_frame_char(g_anim_torch, '*', COLOR_BRIGHT_YELLOW, COLOR_DEFAULT, 0.15f);
+    animation_add_frame_char(g_anim_torch, '^', COLOR_BRIGHT_RED, COLOR_DEFAULT, 0.15f);
+    animation_add_frame_char(g_anim_torch, '.', COLOR_YELLOW, COLOR_DEFAULT, 0.15f);
+
+    g_anim_blade = animation_new(1);
+    animation_add_frame_char(g_anim_blade, ' ', COLOR_DEFAULT, COLOR_DEFAULT, 0.8f);
+    animation_add_frame_char(g_anim_blade, '>', COLOR_BRIGHT_YELLOW, COLOR_DEFAULT, 0.2f);
+    animation_add_frame_char(g_anim_blade, 'X', COLOR_BRIGHT_RED, COLOR_DEFAULT, 0.4f);
+    animation_add_frame_char(g_anim_blade, '<', COLOR_BRIGHT_YELLOW, COLOR_DEFAULT, 0.2f);
+
+    g_world = level_world_new("Dungeon Master", 200, 50, 90, 28, ' ');
     struct Level *lvl = level_world_as_level(g_world);
     level_set_default_color(lvl, COLOR_BRIGHT_BLACK, COLOR_DEFAULT);
 
@@ -596,6 +744,13 @@ int main(void) {
         level_add_point(lvl, g_spikes[i]);
     }
 
+    int blade_coords[3][2] = {{38, 29}, {90, 41}, {165, 17}};
+    for (int i = 0; i < 3; i++) {
+        g_blade_points[i] = point_new(blade_coords[i][0], blade_coords[i][1], 'X');
+        point_set_color(g_blade_points[i], COLOR_BRIGHT_RED, COLOR_DEFAULT);
+        level_add_point(lvl, g_blade_points[i]);
+    }
+
     int potion_coords[6][2] = {
         {5, 37}, {42, 29}, {70, 14}, {86, 31}, {130, 24}, {170, 29}
     };
@@ -613,7 +768,7 @@ int main(void) {
     struct GameObject_Text *lbl_sword = text_new_colored(62, 13, "SWORD [/] -->", COLOR_BRIGHT_CYAN, COLOR_DEFAULT);
     level_add_text(lvl, lbl_sword);
 
-    g_hero = player_new(6, 36, '@', 16.0f);
+    g_hero = player_new(6, 36, '@', 12.0f);
     player_set_color(g_hero, COLOR_BRIGHT_WHITE, COLOR_DEFAULT);
     player_set_health(g_hero, 3);
     player_enable_gravity(g_hero, 40.0f);
@@ -632,11 +787,20 @@ int main(void) {
     struct GameObject_Text *lbl_guard = text_new_colored(172, 14, "GUARD [G]", COLOR_BRIGHT_RED, COLOR_DEFAULT);
     level_add_text(lvl, lbl_guard);
 
-    int torches[5][2] = {{12, 35}, {45, 27}, {95, 29}, {120, 22}, {180, 15}};
-    for (int i = 0; i < 5; i++) {
-        struct GameObject_Point *t = point_new(torches[i][0], torches[i][1], '*');
-        point_set_color(t, COLOR_BRIGHT_YELLOW, COLOR_DEFAULT);
-        level_add_point(lvl, t);
+    g_skeleton = player_new(98, 30, 'S', 6.0f);
+    player_set_color(g_skeleton, COLOR_BRIGHT_WHITE, COLOR_DEFAULT);
+    player_set_health(g_skeleton, 1);
+    player_enable_gravity(g_skeleton, 40.0f);
+    level_add_player(lvl, g_skeleton);
+
+    struct GameObject_Text *lbl_skel = text_new_colored(95, 29, "SKELETON [S]", COLOR_BRIGHT_WHITE, COLOR_DEFAULT);
+    level_add_text(lvl, lbl_skel);
+
+    int torches[6][2] = {{12, 35}, {45, 27}, {95, 29}, {120, 22}, {165, 15}, {180, 15}};
+    for (int i = 0; i < 6; i++) {
+        g_torches[i] = point_new(torches[i][0], torches[i][1], '*');
+        point_set_color(g_torches[i], COLOR_BRIGHT_YELLOW, COLOR_DEFAULT);
+        level_add_point(lvl, g_torches[i]);
     }
 
     level_set_hud_separator(lvl, HUD_TOP, '=', COLOR_YELLOW, COLOR_DEFAULT);
@@ -652,6 +816,13 @@ int main(void) {
     engine_set_update_callback(g_engine, update);
 
     engine_run(g_engine, 60);
+
+    animation_free(g_anim_hero_idle);
+    animation_free(g_anim_hero_run);
+    animation_free(g_anim_hero_attack);
+    animation_free(g_anim_guard);
+    animation_free(g_anim_torch);
+    animation_free(g_anim_blade);
 
     engine_free(g_engine);
     return 0;
